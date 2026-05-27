@@ -1,0 +1,47 @@
+import { Router } from "express";
+import { authMiddleware } from "../../middleware/authMiddleware.js";
+import {
+  validateComponentAccess,
+  validateLocationAccess,
+} from "../../middleware/accessMiddleware.js";
+import { StockController } from "../../controllers/stock/stockController.js";
+
+export const stockRouter = Router();
+
+stockRouter.post(
+  "/create",
+  authMiddleware,
+  validateLocationAccess,
+  validateComponentAccess,
+  StockController.createStock,
+);
+
+stockRouter.delete("/delete", authMiddleware, StockController.deleteStock);
+
+stockRouter.post(
+  "/update",
+  authMiddleware,
+  validateLocationAccess,
+  StockController.updateStock,
+);
+
+stockRouter.post(
+  "/register-loss",
+  authMiddleware,
+  validateLocationAccess,
+  StockController.registerLoss,
+);
+
+stockRouter.post(
+  "/register-adjustment",
+  authMiddleware,
+  validateLocationAccess,
+  StockController.registerAdjustment,
+);
+
+stockRouter.get(
+  "/list",
+  authMiddleware,
+  validateLocationAccess,
+  StockController.retrieveStock,
+);
