@@ -1,5 +1,5 @@
 import { validateSchema } from "../../helpers/validateSchema.js";
-import { stockModel } from "../../models/stock/stockModel.js";
+import { StockModel } from "../../models/stock/StockModel.js";
 import { BussinesLogicStock } from "../../services/stock/bussinesLogicStock.js";
 import { StockService } from "../../services/stock/stockServices.js";
 import {
@@ -63,7 +63,7 @@ export class StockController {
         return res.status(400).json({ error });
       }
 
-      const result = await stockModel.deleteStock({ userId, data });
+      const result = await StockModel.deleteStock({ userId, data });
       if (!result) {
         return res.status(404).json({ error: "Stock not found" });
       }
@@ -99,7 +99,7 @@ export class StockController {
 
       console.log(unitsPrice);
 
-      const stock = await stockModel.RetrieveStock({
+      const stock = await StockModel.RetrieveStock({
         stockId: data.stock_id,
         location_id: data.location_id,
         component_id: data.component_id,
@@ -160,7 +160,7 @@ export class StockController {
 
       console.log(unitsPrice);
 
-      const stock = await stockModel.RetrieveStock({
+      const stock = await StockModel.RetrieveStock({
         stockId: data.stock_id,
         location_id: data.location_id,
         component_id: data.component_id,
@@ -221,7 +221,7 @@ export class StockController {
 
       console.log(unitsPrice);
 
-      const stock = await stockModel.RetrieveStock({
+      const stock = await StockModel.RetrieveStock({
         stockId: data.stock_id,
         location_id: data.location_id,
         component_id: data.component_id,
@@ -270,7 +270,7 @@ export class StockController {
         return res.status(400).json({ error });
       }
 
-      const result = await stockModel.retrieveStock({
+      const result = await StockModel.retrieveStock({
         stock_id: data.id_stock,
         location_id: data.id,
       });

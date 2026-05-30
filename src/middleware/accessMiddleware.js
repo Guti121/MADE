@@ -101,3 +101,32 @@ export const validateComponentAccess = async (req, res, next) => {
     });
   }
 };
+export const validateContainerAccess = async (req, res, next) => {
+  try {
+    const containerId = Number(req.body.container_id);
+    const { id: userId } = req.user;
+
+    if (!containerId || isNaN(containerId) || !userId || isNaN(userId)) {
+      return res.status(400).json({
+        error: "Invalid container ID or user ID",
+      });
+    }
+
+    const container = await AccessService.validateContainerAccess({
+      containerId,
+      userId,
+    });
+
+    if (!container) {
+      return res.status(404).json({
+        error: "container not found",
+      });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};

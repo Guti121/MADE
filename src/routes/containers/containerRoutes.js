@@ -19,6 +19,19 @@ containerRouter.delete(
   validateBrandAccess,
   TypeContainerController.deleteTypeContainer,
 );
+containerRouter.get(
+  "/list-type",
+  authMiddleware,
+  validateBrandAccess,
+  TypeContainerController.ListTypeContainer,
+);
+
+containerRouter.post(
+  "/update-type",
+  authMiddleware,
+  validateBrandAccess,
+  TypeContainerController.updateTypeContainer,
+);
 
 //Containers
 containerRouter.post(
@@ -26,4 +39,22 @@ containerRouter.post(
   authMiddleware,
   validateBrandAccess,
   ContainerController.createContainer,
+);
+containerRouter.post(
+  "/update",
+  authMiddleware,
+  validateBrandAccess,
+  ContainerController.updateContainer,
+);
+containerRouter.delete(
+  "/delete",
+  authMiddleware,
+  validateBrandAccess,
+  ContainerController.deleteContainer,
+);
+containerRouter.get(
+  "/list",
+  authMiddleware,
+  validateBrandAccess,
+  ContainerController.listContainer,
 );

@@ -16,7 +16,12 @@ stockRouter.post(
   StockController.createStock,
 );
 
-stockRouter.delete("/delete", authMiddleware, StockController.deleteStock);
+stockRouter.delete(
+  "/delete",
+  authMiddleware,
+  validateLocationAccess,
+  StockController.deleteStock,
+);
 
 stockRouter.post(
   "/update",

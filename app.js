@@ -7,6 +7,7 @@ import { componentRouter } from "./src/routes/components/componentRoutes.js";
 import { stockRouter } from "./src/routes/stock/stockRoutes.js";
 import { formulaRouter } from "./src/routes/formula/formulaRoutes.js";
 import { containerRouter } from "./src/routes/containers/containerRoutes.js";
+import { stockContainerRouter } from "./src/routes/containers/stockContainersRoutes.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/api/component", componentRouter);
 app.use("/api/stock", stockRouter);
 app.use("/api/formula", formulaRouter);
 app.use("/api/container", containerRouter);
+app.use("/api/stock-container", stockContainerRouter);
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {

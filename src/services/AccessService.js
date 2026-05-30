@@ -88,6 +88,32 @@ export class AccessService {
     return result.rows[0];
   }
 
+  static async validateTypeContainerAccess({ typeContainerId, userId }) {
+    console.log(
+      typeContainerId,
+      userId,
+      "asssssssssssssssssssssssssssssssssssssss",
+    );
+    const query = `
+     SELECT tc.*
+      FROM type_containers tc
+      JOIN brands b ON tc.brand_id = b.id
+      WHERE tc.id = $1
+        AND b.user_id = $2;
+    `;
+
+    const values = [typeContainerId, userId];
+
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+    console.log(result.rows[0]);
+
+    return result.rows[0];
+  }
+
   static async validateComponentAccess({ componentId, userId }) {
     const query = `
      SELECT c.*
@@ -97,6 +123,26 @@ export class AccessService {
         AND b.user_id = $2;
     `;
     const values = [componentId, userId];
+
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+    console.log(result.rows[0]);
+
+    return result.rows[0];
+  }
+
+  static async validateContainerAccess({ containerId, userId }) {
+    const query = `
+     SELECT c.*
+      FROM containers c
+      JOIN brands b ON c.brand_id = b.id
+      WHERE c.id = $1
+        AND b.user_id = $2;
+    `;
+    const values = [containerId, userId];
 
     const result = await pool.query(query, values);
 

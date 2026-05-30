@@ -1,6 +1,6 @@
 import { pool } from "../../config/db.js";
 
-export class stockModel {
+export class StockModel {
   static async createStock(client, { userId, params, unitsPrice }) {
     const query = `INSERT INTO stock (Component_id,Location_id,Quantity_base,Avg_price,Wholesale_price,Consumer_price,created_by,updated_by)
         VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`;

@@ -17,5 +17,6 @@ export const ListTypeContainerSchema = z.object({
 
 export const updateTypeContainerSchema = z.object({
   id: z.coerce.number().min(1, "ID is required"),
-  name: z.string().min(2, "Name is required"),
+  name: z.string().optional(),
+  description: z.string().optional(),
 });

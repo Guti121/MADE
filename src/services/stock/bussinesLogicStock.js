@@ -11,7 +11,11 @@ export class BussinesLogicStock {
     consumer_price,
   }) {
     const { weight } = await BrandModel.viewBrand({ userId });
-
+    console.log(
+      quantity_base, //coerce
+      unit, //coerce
+      userId,
+    );
     let quantityInBase;
     let units;
 
@@ -67,7 +71,7 @@ export class BussinesLogicStock {
   }
 
   static async calculeteAVGPrice({ stock, data }) {
-    const currentQuantity = Number(stock.quantity_base);
+    const currentQuantity = Number(stock.quantity_base || stock.quantity);
 
     const currentAvgPrice = Number(stock.avg_price);
 

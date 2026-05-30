@@ -111,6 +111,9 @@ export class ComponentController {
         brandId,
         params: data,
       });
+      if (!result) {
+        return res.status(404).json({ error: "Not found" });
+      }
 
       return res.status(200).json({
         message: "UPDATED SUCCESSFULLY",

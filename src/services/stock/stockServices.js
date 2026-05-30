@@ -1,5 +1,5 @@
 import { pool } from "../../config/db.js";
-import { stockModel } from "../../models/stock/stockModel.js";
+import { StockModel } from "../../models/stock/StockModel.js";
 import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
 
 //CREATE INITIAL MOVEMENT
@@ -22,7 +22,7 @@ export class StockService {
       await client.query("BEGIN");
 
       // 1. CREATE STOCK
-      const stock = await stockModel.createStock(client, {
+      const stock = await StockModel.createStock(client, {
         userId,
         params,
         unitsPrice,
@@ -79,7 +79,7 @@ export class StockService {
       await client.query("BEGIN");
 
       // 1. CREATE STOCK
-      const stock = await stockModel.updateStock(client, {
+      const stock = await StockModel.updateStock(client, {
         stockId,
         unitsPrice,
         location_id,
@@ -121,7 +121,7 @@ export class StockService {
       await client.query("BEGIN");
 
       // 1. CREATE STOCK
-      const result = await stockModel.registerLoss(client, {
+      const result = await StockModel.registerLoss(client, {
         quantity: smallSizeLoss,
         userId,
         stockId: stock.id,
@@ -169,7 +169,7 @@ export class StockService {
       await client.query("BEGIN");
 
       // 1. CREATE STOCK
-      const result = await stockModel.registerAdjust(client, {
+      const result = await StockModel.registerAdjust(client, {
         quantity: smallSizeAdjust,
         userId,
         stockId: stock.id,

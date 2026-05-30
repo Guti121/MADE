@@ -18,7 +18,7 @@ export class ComponentModel {
     SET 
       name = COALESCE($1, name),
       type_component_id = COALESCE($2, type_component_id)
-    WHERE brand_id = $3 
+    WHERE brand_id = $3   
       AND id = $4
     RETURNING *;
   `;
@@ -41,58 +41,93 @@ export class ComponentModel {
     return result.rows[0];
   }
 
-  static async listComponent({ brand_id, page = 1, limit = 10, name,type_component }) {
+  static async listComponent({
+    brand_id,
+    page = 1,
+    limit = 10,
+    name,
+    type_component,
+  }) {
     const offset = (page - 1) * limit;
-    console.log(brand_id, (page = 1), (limit = 10), name);
-    let query = `SELECT * 
-    FROM components 
-    WHERE brand_id = $1`;
+
+    // MAIN QUERY
+    let query = `
+    SELECT 
+      c.*,
+      tc.name AS type_component_name
+    FROM components c
+    JOIN type_components tc
+      ON c.type_component_id = tc.id
+    WHERE c.brand_id = $1
+  `;
 
     const values = [brand_id];
+
     let index = 2;
 
+    // FILTER BY COMPONENT NAME
     if (name) {
-      query += ` AND name ILIKE $${index}`;
+      query += ` AND c.name ILIKE $${index}`;
       values.push(`%${name}%`);
       index++;
     }
 
+    // FILTER BY TYPE COMPONENT NAME
     if (type_component) {
-      query += ` AND type_component_id = $${index}`;
-      values.push(type_component);
+      query += ` AND tc.name ILIKE $${index}`;
+      values.push(`%${type_component}%`);
       index++;
     }
 
-    query += ` ORDER BY id DESC LIMIT $${index} OFFSET $${index + 1}`;
+    // PAGINATION
+    query += `
+    ORDER BY c.id DESC
+    LIMIT $${index}
+    OFFSET $${index + 1}
+  `;
+
     values.push(limit, offset);
 
     const resultQuery = await pool.query(query, values);
 
-    // count query (same filters!)
+    // COUNT QUERY
     let countQuery = `
-        SELECT COUNT(*) AS total 
-        FROM components 
-        WHERE brand_id = $1
-      `;
+    SELECT COUNT(*) AS total
+    FROM components c
+    JOIN type_components tc
+      ON c.type_component_id = tc.id
+    WHERE c.brand_id = $1
+  `;
 
     const countValues = [brand_id];
-    index = 2;
-    console.log("SEGUIMOS BIEN 1", resultQuery);
 
+    index = 2;
+
+    // FILTER BY COMPONENT NAME
     if (name) {
-      countQuery += ` AND name ILIKE $${index}`;
+      countQuery += ` AND c.name ILIKE $${index}`;
       countValues.push(`%${name}%`);
       index++;
     }
 
+    // FILTER BY TYPE COMPONENT NAME
+    if (type_component) {
+      countQuery += ` AND tc.name ILIKE $${index}`;
+      countValues.push(`%${type_component}%`);
+      index++;
+    }
+
     const countResult = await pool.query(countQuery, countValues);
-    console.log("SEGUIMOS BIEN 2", countResult);
 
     return {
       data: resultQuery.rows,
+
       total: Number(countResult.rows[0].total),
+
       page,
+
       limit,
+
       totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
     };
   }
