@@ -46,9 +46,9 @@ export class TypeComponentsController {
   static async deleteTypeComponent(req, res) {
     try {
       const brand_id = req.brand;
-      console.log(req.params.idType);
+      console.log(req.query.idType);
 
-      const params = deleteTypeComponentSchema.safeParse(req.params);
+      const params = deleteTypeComponentSchema.safeParse(req.query);
 
       if (!params.success) {
         return res.status(400).json({

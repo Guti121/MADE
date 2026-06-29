@@ -40,6 +40,7 @@ export class StockService {
 
       await StockMovementModel.createMovement(client, {
         stock_id: stock.id,
+        location_id: stock.location_id,
 
         movement_type: "INITIAL_STOCK",
 
@@ -92,6 +93,7 @@ export class StockService {
         stock_id: stock.id,
 
         movement_type: "PURCHASE",
+        location_id: location_id,
 
         quantity: unitsPrice.quantityInBase,
 

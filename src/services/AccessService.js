@@ -46,6 +46,7 @@ export class AccessService {
     }
 
     const row = result.rows[0];
+    console.log(row, "lcoation");
 
     return {
       location: {
@@ -120,7 +121,8 @@ export class AccessService {
       FROM components c
       JOIN brands b ON c.brand_id = b.id
       WHERE c.id = $1
-        AND b.user_id = $2;
+        AND b.user_id = $2
+        AND c.state ;
     `;
     const values = [componentId, userId];
 

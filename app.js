@@ -8,9 +8,19 @@ import { stockRouter } from "./src/routes/stock/stockRoutes.js";
 import { formulaRouter } from "./src/routes/formula/formulaRoutes.js";
 import { containerRouter } from "./src/routes/containers/containerRoutes.js";
 import { stockContainerRouter } from "./src/routes/containers/stockContainersRoutes.js";
+import { saleRouter } from "./src/routes/sales/saleRouters.js";
+import cors from "cors";
 
 const app = express();
 
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
+
+app.use(express.json());
 app.use(json());
 app.use(cookieParser());
 app.disable("x-powered-by");
@@ -23,6 +33,7 @@ app.use("/api/stock", stockRouter);
 app.use("/api/formula", formulaRouter);
 app.use("/api/container", containerRouter);
 app.use("/api/stock-container", stockContainerRouter);
+app.use("/api/sale", saleRouter);
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {

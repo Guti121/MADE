@@ -2,7 +2,12 @@ import { pool } from "../../config/db.js";
 
 export class ContainerModel {
   static async createContainer({ brand_id, params, newMeasures, userId }) {
-    console.log(params, brand_id, "--------------------------------");
+    console.log(
+      params,
+      brand_id,
+      newMeasures,
+      "--------------------------------",
+    );
     const query =
       "INSERT INTO containers (name , capacity, unit,type_Container_id, brand_id,created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *";
     const values = [
@@ -94,8 +99,8 @@ export class ContainerModel {
 
     // FILTER TYPE CONTAINER NAME
     if (type_container) {
-      query += ` AND tc.name ILIKE $${index}`;
-      values.push(`%${type_container}%`);
+      query += ` AND c.type_container_id = $${index}`;
+      values.push(type_container);
       index++;
     }
 
@@ -137,8 +142,8 @@ export class ContainerModel {
     }
 
     if (type_container) {
-      countQuery += ` AND tc.name ILIKE $${index}`;
-      countValues.push(`%${type_container}%`);
+      countQuery += ` AND c.type_container_id =$${index}`;
+      countValues.push(type_container);
       index++;
     }
 

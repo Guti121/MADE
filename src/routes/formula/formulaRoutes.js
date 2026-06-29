@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { formulaController } from "../../controllers/formula/formulaController.js";
 import { authMiddleware } from "../../middleware/authMiddleware.js";
-import { validateBrandAccess } from "../../middleware/accessMiddleware.js";
+import {
+  validateBrandAccess,
+  validateLocationAccess,
+} from "../../middleware/accessMiddleware.js";
 import { FormulaComponentsController } from "../../controllers/formula/formulaComponentsController.js";
 
 export const formulaRouter = Router();
@@ -25,6 +28,13 @@ formulaRouter.get(
   authMiddleware,
   validateBrandAccess,
   formulaController.listFormula,
+);
+formulaRouter.get(
+  "/list-by-location",
+  authMiddleware,
+  validateBrandAccess,
+  validateLocationAccess,
+  formulaController.listFormuByLocation,
 );
 
 //formula components

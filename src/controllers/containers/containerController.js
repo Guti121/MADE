@@ -28,7 +28,7 @@ export class ContainerController {
         userId,
       });
 
-      const newMeassures = await BussinesLogicStock.convertMeasuresStock({
+      const newMeasures = await BussinesLogicStock.convertMeasuresStock({
         unit: data.unit,
         quantity_base: data.capacity,
         userId,
@@ -39,12 +39,12 @@ export class ContainerController {
           error: "Unauthorized type Container",
         });
       }
-
+      console.log(newMeasures);
       // Create Container
       const result = await ContainerModel.createContainer({
         brand_id: brandId,
         params: data,
-        newMeassures,
+        newMeasures,
         userId,
       });
 

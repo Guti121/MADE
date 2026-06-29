@@ -22,7 +22,7 @@ locationRoutes.put(
 );
 
 locationRoutes.get(
-  "/view-location",
+  "/list-location",
   authMiddleware,
   locationController.viewLocation,
 );

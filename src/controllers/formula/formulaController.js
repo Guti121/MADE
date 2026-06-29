@@ -7,6 +7,7 @@ import {
   createFormulaSchema,
   deleteFormulaSchema,
   ListFormulaSchema,
+  ListFormulaSchemalocation,
   retrieveFormulaComponentsSchema,
 } from "../../shemas/formula/formulaSchemas.js";
 
@@ -41,7 +42,8 @@ export class formulaController {
         message: "FORMULA CREATED",
         result,
       });
-    } catch {
+    } catch (error) {
+      console.log(error);
       res.status(400).json({ error: "Error with creation" });
     }
   }
@@ -81,6 +83,40 @@ export class formulaController {
         brand_id: brandId,
         page: data.page,
         limit: data.limit,
+        name: data.name,
+        quantity: data.quantity,
+      });
+      if (!result) {
+        return res.status(404).json({ error: "not fount component" });
+      }
+      return res.status(200).json({
+        message: "LIST SUCCESSFULLY",
+        result,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  }
+  static async listFormuByLocation(req, res) {
+    try {
+      const { id: brandId } = req.brand;
+      const { data, error } = validateSchema(
+        ListFormulaSchemalocation,
+        req.query,
+      );
+
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      const result = await FormulaModel.listStockLocation({
+        brand_id: brandId,
+        page: data.page,
+        limit: data.limit,
+        location_id: data.id,
         name: data.name,
         quantity: data.quantity,
       });

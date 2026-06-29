@@ -18,9 +18,9 @@ export class ComponentModel {
     SET 
       name = COALESCE($1, name),
       type_component_id = COALESCE($2, type_component_id)
-    WHERE brand_id = $3   
-      AND id = $4
-    RETURNING *;
+      WHERE brand_id = $3   
+      AND id = $4 AND state = true
+      RETURNING *;
   `;
 
     const values = [params.name, params.type_component, brandId, params.id];
@@ -30,15 +30,44 @@ export class ComponentModel {
     return result.rows[0];
   }
   static async deleteComponent({ brandId, params }) {
-    const query = `DELETE FROM components 
-      WHERE id = $1 AND brand_id = $2
-      RETURNING *;`;
+    const client = await pool.connect();
 
-    const values = [params.id, brandId];
+    try {
+      await client.query("BEGIN");
 
-    const result = await pool.query(query, values);
+      const componentResult = await client.query(
+        `
+      UPDATE components
+      SET state = FALSE
+      WHERE id = $1
+        AND brand_id = $2
+      RETURNING *;
+      `,
+        [params.id, brandId],
+      );
 
-    return result.rows[0];
+      if (componentResult.rowCount === 0) {
+        throw new Error("Component not found");
+      }
+
+      await client.query(
+        `
+      UPDATE stock
+      SET state = FALSE
+      WHERE component_id = $1;
+      `,
+        [params.id],
+      );
+
+      await client.query("COMMIT");
+
+      return componentResult.rows[0];
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   static async listComponent({
@@ -58,7 +87,7 @@ export class ComponentModel {
     FROM components c
     JOIN type_components tc
       ON c.type_component_id = tc.id
-    WHERE c.brand_id = $1
+    WHERE c.brand_id = $1 AND state = true
   `;
 
     const values = [brand_id];
@@ -74,8 +103,8 @@ export class ComponentModel {
 
     // FILTER BY TYPE COMPONENT NAME
     if (type_component) {
-      query += ` AND tc.name ILIKE $${index}`;
-      values.push(`%${type_component}%`);
+      query += ` AND c.type_component_id = $${index}`;
+      values.push(type_component);
       index++;
     }
 
@@ -96,7 +125,7 @@ export class ComponentModel {
     FROM components c
     JOIN type_components tc
       ON c.type_component_id = tc.id
-    WHERE c.brand_id = $1
+    WHERE c.brand_id = $1 AND state = true
   `;
 
     const countValues = [brand_id];
@@ -112,8 +141,8 @@ export class ComponentModel {
 
     // FILTER BY TYPE COMPONENT NAME
     if (type_component) {
-      countQuery += ` AND tc.name ILIKE $${index}`;
-      countValues.push(`%${type_component}%`);
+      countQuery += ` AND c.type_component_id = $${index}`;
+      countValues.push(type_component);
       index++;
     }
 

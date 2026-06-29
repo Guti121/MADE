@@ -66,6 +66,14 @@ export const retrieveStockContainerSchema = z.object({
   id: z.coerce.number().min(1, "location ID not provided"),
   container: z.coerce.number().min(1, "container ID not provided"),
 });
+
+export const ListStockContainerSchema = z.object({
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(10),
+  name: z.string().optional(),
+  id: z.string().optional(),
+  type_container: z.coerce.number().optional(),
+});
 // StockService.addStock()
 
 // StockService.registerLoss()

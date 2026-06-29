@@ -8,6 +8,7 @@ import {
   retrieveStockSchema,
   registerLossStockSchema,
   updateStockSchema,
+  ListStockSchema,
 } from "../../shemas/stock/stockSchemas.js";
 
 export class StockController {
@@ -196,7 +197,7 @@ export class StockController {
       console.error(error);
 
       return res.status(500).json({
-        error: "Internal server error",
+        error: error.message || "Internal server error",
       });
     }
   }
@@ -285,6 +286,39 @@ export class StockController {
     } catch (error) {
       console.error(error);
 
+      return res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  }
+  static async listStock(req, res) {
+    try {
+      const { id: brandId } = req.brand;
+      const { data, error } = validateSchema(ListStockSchema, req.query);
+
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      console.log("entramos");
+      const result = await StockModel.listStock({
+        brand_id: brandId,
+        page: data.page,
+        limit: data.limit,
+        name: data.name,
+        location: data.id,
+        type_component: data.type_component,
+      });
+      console.log(result, "result");
+      if (!result) {
+        return res.status(404).json({ error: "not fount Stock" });
+      }
+      return res.status(200).json({
+        message: "LIST SUCCESSFULLY",
+        result,
+      });
+    } catch (error) {
+      console.log(error);
       return res.status(500).json({
         error: "Internal server error",
       });

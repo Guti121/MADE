@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/authMiddleware.js";
 import {
+  validateBrandAccess,
   validateComponentAccess,
   validateLocationAccess,
 } from "../../middleware/accessMiddleware.js";
@@ -46,6 +47,13 @@ stockRouter.post(
 
 stockRouter.get(
   "/list",
+  authMiddleware,
+  validateBrandAccess,
+  validateLocationAccess,
+  StockController.listStock,
+);
+stockRouter.get(
+  "/retrieve",
   authMiddleware,
   validateLocationAccess,
   StockController.retrieveStock,

@@ -51,12 +51,27 @@ export class BussinesLogicStock {
     }
 
     // PRICE PER BASE UNIT
+    console.log(
+      quantity_base, //coerce
+      unit, //coerce
+      userId, //coerce
+    );
     const purchaseUnitPrice = Number(purchase_price) / Number(quantityInBase);
 
     const wholesaleUnitPrice = Number(wholesale_price) / Number(quantityInBase);
 
     const consumerUnitPrice = Number(consumer_price) / Number(quantityInBase);
+    console.log(
+      quantityInBase,
 
+      purchaseUnitPrice,
+
+      wholesaleUnitPrice,
+
+      consumerUnitPrice,
+
+      units,
+    );
     return {
       quantityInBase,
 

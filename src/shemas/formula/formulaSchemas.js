@@ -31,6 +31,13 @@ export const ListFormulaSchema = z.object({
   quantity: z.string().optional(),
 });
 
+export const ListFormulaSchemalocation = z.object({
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(10),
+  name: z.string().optional(),
+  quantity: z.string().optional(),
+  id: z.string().optional(),
+});
 //FORMULA COMPONENTS
 
 export const retrieveFormulaComponentsSchema = z.object({

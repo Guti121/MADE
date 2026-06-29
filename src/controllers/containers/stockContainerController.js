@@ -7,6 +7,7 @@ import { StockService } from "../../services/stock/stockServices.js";
 import {
   createStockContainerSchema,
   deleteStockContainerSchema,
+  ListStockContainerSchema,
   registerLossStockContainerSchema,
   retrieveStockContainerSchema,
   updateStockContainerSchema,
@@ -298,6 +299,42 @@ export class StockContainerController {
     } catch (error) {
       console.error(error);
 
+      return res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  }
+  static async listStock(req, res) {
+    try {
+      const { id: brandId } = req.brand;
+      const { data, error } = validateSchema(
+        ListStockContainerSchema,
+        req.query,
+      );
+
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      console.log("entramos", data, "aaaaaaaaaaaaaaa");
+      const result = await StockContainerModel.listStockContainer({
+        brand_id: brandId,
+        page: data.page,
+        limit: data.limit,
+        name: data.name,
+        location: data.id,
+        type_container: data.type_container,
+      });
+      console.log(result, "result");
+      if (!result) {
+        return res.status(404).json({ error: "not fount Stock container" });
+      }
+      return res.status(200).json({
+        message: "LIST SUCCESSFULLY",
+        result,
+      });
+    } catch (error) {
+      console.log(error);
       return res.status(500).json({
         error: "Internal server error",
       });

@@ -18,5 +18,5 @@ export const ListComponentSchema = z.object({
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(10),
   name: z.string().optional(),
-  type_component: z.string().optional(),
+  type_component: z.coerce.number().optional(),
 });

@@ -61,7 +61,7 @@ export const registerLossStockSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(5, "Reason must contain at least 5 characters")
+    .min(1, "Reason must contain at least 5 characters")
     .max(500, "Reason is too long"),
 });
 
@@ -69,6 +69,15 @@ export const retrieveStockSchema = z.object({
   id_stock: z.coerce.number().min(1, "Stock ID not provided"),
   id: z.coerce.number().min(1, "location ID not provided"),
 });
+
+export const ListStockSchema = z.object({
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(10),
+  name: z.string().optional(),
+  id: z.string().optional(),
+  type_component: z.coerce.number().optional(),
+});
+
 // StockService.addStock()
 
 // StockService.registerLoss()

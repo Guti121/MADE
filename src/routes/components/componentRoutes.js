@@ -15,7 +15,7 @@ componentRouter.post(
 );
 
 componentRouter.delete(
-  "/delete-type/:idType",
+  "/delete-type",
   authMiddleware,
   validateBrandAccess,
   TypeComponentsController.deleteTypeComponent,
@@ -42,7 +42,7 @@ componentRouter.post(
   validateBrandAccess,
   ComponentController.createComponent,
 );
-componentRouter.delete(
+componentRouter.get(
   "/delete/:id",
   authMiddleware,
   validateBrandAccess,
