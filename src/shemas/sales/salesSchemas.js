@@ -46,8 +46,12 @@ export const getSaleSchema = z.object({
   id: z.coerce.number().positive(),
 
   page: z.coerce.number().positive().optional(),
+
   limit: z.coerce.number().positive().optional(),
-  name: z.string().min(5).optional(),
+
+  start_date: z.string().date().optional(),
+
+  end_date: z.string().date().optional(),
 
   client_id: z.coerce.number().positive().optional(),
 });

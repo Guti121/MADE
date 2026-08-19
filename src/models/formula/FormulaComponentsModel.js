@@ -30,6 +30,7 @@ JOIN stock s
   ON s.component_id = c.id
 
 WHERE f.brand_id = $1
+  AND f.state = TRUE
   AND fc.formula_id = $2
 
   AND NOT EXISTS (

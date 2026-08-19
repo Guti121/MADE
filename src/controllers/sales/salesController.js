@@ -49,26 +49,27 @@ export class SaleController {
   static async listSales(req, res) {
     try {
       const { data, error } = validateSchema(getSaleSchema, req.query);
+
       if (error) {
         return res.status(400).json({
           error,
         });
       }
-      const result = await SaleModel.listSales({
-        location_id: data.location_id,
-        page: data.name,
-        limit: data.name,
-        client_id: data.name,
-        name: data.name,
-      });
 
-      return res.status(200).json({
-        data: result,
+      const result = await SaleService.listSales({
+        location_id: data.id,
+        page: data.page,
+        limit: data.limit,
+        client_id: data.client_id,
+        start_date: data.start_date,
+        end_date: data.end_date,
       });
+      console.log(result);
+      return res.status(200).json(result);
     } catch (error) {
       console.error(error);
 
-      return res.status(500).json({
+      return res.status(error.status || 500).json({
         error: error.message,
       });
     }

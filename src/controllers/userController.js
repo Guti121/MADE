@@ -238,21 +238,33 @@ export class UserController {
   }
 
   static async logoutUser(req, res) {
-    const token = req.cookies.refresh_token;
     try {
-      const result = await UserModel.deleteSession({ token });
-      if (!result) {
-        return res.status(403).json({
-          error: "Error Logout, Token no provided",
-        });
+      const token = req.cookies.refresh_token;
+
+      if (token) {
+        await UserModel.deleteSession({ token });
       }
-      res.json({
+
+      res.clearCookie("refresh_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      });
+
+      res.clearCookie("access_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      });
+
+      return res.json({
         message: "LOGOUT SUCCESSFULLY",
       });
     } catch (error) {
-      console.log(error);
-      return res.status(403).json({
-        error: "Error Logout",
+      console.error(error);
+
+      return res.status(500).json({
+        error: "Logout error",
       });
     }
   }

@@ -107,12 +107,13 @@ export class formulaController {
         ListFormulaSchemalocation,
         req.query,
       );
-
+      console.log(data);
       if (error) {
+        console.log(error);
         return res.status(400).json({ error });
       }
 
-      const result = await FormulaModel.listStockLocation({
+      const result = await FormulaModel.listFormulaLocation({
         brand_id: brandId,
         page: data.page,
         limit: data.limit,
@@ -128,7 +129,7 @@ export class formulaController {
         result,
       });
     } catch (error) {
-      console.log(error);
+      console.log(error, "error");
       return res.status(500).json({
         error: "Internal server error",
       });

@@ -59,7 +59,7 @@ export class StockController {
     try {
       const { id: userId } = req.user;
       const { data, error } = validateSchema(deleteStockSchema, req.query);
-
+      console.log(data);
       if (error) {
         return res.status(400).json({ error });
       }
@@ -84,6 +84,7 @@ export class StockController {
     try {
       const { id: userId } = req.user;
       const { data, error } = validateSchema(updateStockSchema, req.body);
+      console.log(data, "data updatestock");
       if (error) {
         return res.status(400).json({ error });
       }
@@ -106,7 +107,7 @@ export class StockController {
         component_id: data.component_id,
       });
 
-      console.log(stock);
+      console.log(stock, "stoccccckk");
       const AVGPrice = await BussinesLogicStock.calculeteAVGPrice({
         stock,
         data: unitsPrice,

@@ -44,7 +44,8 @@ export class SaleModel {
     page = 1,
     limit = 10,
     client_id,
-    name,
+    start_date,
+    end_date,
   }) {
     const offset = (page - 1) * limit;
 
@@ -52,17 +53,34 @@ export class SaleModel {
     const values = [];
     let param = 1;
 
+    // LOCATION
     if (location_id) {
       conditions.push(`s.location_id = $${param++}`);
       values.push(location_id);
     }
+
+    // CLIENT
     if (client_id) {
       conditions.push(`s.client_id = $${param++}`);
       values.push(client_id);
     }
 
+    // START DATE
+    if (start_date) {
+      conditions.push(`DATE(s.created_at) >= $${param++}`);
+      values.push(start_date);
+    }
+
+    // END DATE
+    if (end_date) {
+      conditions.push(`DATE(s.created_at) <= $${param++}`);
+      values.push(end_date);
+    }
+
     const whereClause =
       conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    //================ MAIN QUERY ====================
 
     values.push(limit);
     values.push(offset);
@@ -70,25 +88,40 @@ export class SaleModel {
     const query = `
     SELECT
       s.id,
+
       s.client_id,
+
+      c.name AS client_name,
+
       s.subtotal,
+
       s.discount_total,
+
       s.tax_total,
+
       s.total_cost,
+
       s.total_profit,
+
       s.is_wholesale,
+
       s.created_at,
 
       COUNT(si.id) AS items_count
 
     FROM sales s
 
+    LEFT JOIN clients c
+      ON c.id = s.client_id
+
     LEFT JOIN sales_items si
       ON si.sale_id = s.id
 
     ${whereClause}
 
-    GROUP BY s.id
+    GROUP BY
+      s.id,
+      c.name
 
     ORDER BY s.created_at DESC
 
@@ -96,10 +129,108 @@ export class SaleModel {
     OFFSET $${param++}
   `;
 
+    const resultQuery = await pool.query(query, values);
+
+    //================ COUNT QUERY ====================
+
+    const countConditions = [];
+    const countValues = [];
+    let countParam = 1;
+
+    if (location_id) {
+      countConditions.push(`location_id = $${countParam++}`);
+      countValues.push(location_id);
+    }
+
+    if (client_id) {
+      countConditions.push(`client_id = $${countParam++}`);
+      countValues.push(client_id);
+    }
+
+    if (start_date) {
+      countConditions.push(`DATE(created_at) >= $${countParam++}`);
+      countValues.push(start_date);
+    }
+
+    if (end_date) {
+      countConditions.push(`DATE(created_at) <= $${countParam++}`);
+      countValues.push(end_date);
+    }
+
+    const countWhere =
+      countConditions.length > 0
+        ? `WHERE ${countConditions.join(" AND ")}`
+        : "";
+
+    const countQuery = `
+    SELECT COUNT(*) AS total
+
+    FROM sales
+
+    ${countWhere}
+  `;
+
+    const countResult = await pool.query(countQuery, countValues);
+
+    return {
+      data: resultQuery.rows,
+
+      total: Number(countResult.rows[0].total),
+
+      page,
+
+      limit,
+
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
+    };
+  }
+
+  static async getSalesStatistics({ location_id, start_date, end_date }) {
+    const conditions = [];
+    const values = [];
+    let param = 1;
+
+    if (location_id) {
+      conditions.push(`location_id = $${param++}`);
+      values.push(location_id);
+    }
+
+    if (start_date) {
+      conditions.push(`DATE(created_at) >= $${param++}`);
+      values.push(start_date);
+    }
+
+    if (end_date) {
+      conditions.push(`DATE(created_at) <= $${param++}`);
+      values.push(end_date);
+    }
+
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const query = `
+      SELECT
+
+        COUNT(*) AS sales_count,
+
+        COALESCE(SUM(subtotal),0) AS total_sales,
+
+        COALESCE(SUM(total_cost),0) AS total_cost,
+
+        COALESCE(SUM(total_profit),0) AS total_profit,
+
+        COALESCE(AVG(subtotal),0) AS average_ticket
+
+      FROM sales
+
+      ${whereClause}
+    `;
+
     const result = await pool.query(query, values);
 
-    return result.rows;
+    return result.rows[0];
   }
+
   static async retrieveSaleDetail({ id, location_id }) {
     const saleResult = await pool.query(
       `

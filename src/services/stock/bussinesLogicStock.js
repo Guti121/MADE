@@ -86,12 +86,14 @@ export class BussinesLogicStock {
   }
 
   static async calculeteAVGPrice({ stock, data }) {
+    console.log(data, stock, "data calculeteAVGPrice");
+
     const currentQuantity = Number(stock.quantity_base || stock.quantity);
 
     const currentAvgPrice = Number(stock.avg_price);
 
     const incomingQuantity = Number(data.quantityInBase);
-    console.log(data.quantityInBase, data);
+    console.log(data.quantityInBase, data, "data calculeteAVGPrice");
     const incomingAvgPrice = Number(data.purchaseUnitPrice);
 
     const currentTotalValue = currentQuantity * currentAvgPrice;
@@ -129,7 +131,7 @@ export class BussinesLogicStock {
 
     const adjustUnitsStock = Number(unitsPrice.quantityInBase);
 
-    if (currentStock <= 0) {
+    if (currentStock < 0) {
       throw new Error("Stock is too low");
     }
     console.log(currentStock - adjustUnitsStock, "quantity Adjustment");

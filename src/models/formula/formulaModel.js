@@ -48,8 +48,13 @@ export class FormulaModel {
     return results;
   }
   static async deleteFormula({ brandId, data }) {
-    const query =
-      "DELETE FROM formulas WHERE id=$1 AND brand_id = $2 RETURNING * ";
+    const query = `
+        UPDATE formulas
+        SET state = false
+        WHERE id = $1
+          AND brand_id = $2
+        RETURNING *;
+      `;
 
     const values = [data.id_formula, brandId];
 
@@ -61,15 +66,21 @@ export class FormulaModel {
 
   static async listStock({ brand_id, page = 1, limit = 10, name, quantity }) {
     const offset = (page - 1) * limit;
+
     let query = `
-      SELECT f.*
+    SELECT
+      f.id,
+      f.name,
+      f.final_quantity,
+      f.created_at,
+      f.updated_at
 
-      FROM formulas f
+    FROM formulas f
 
-      WHERE f.brand_id = $1
+    WHERE f.brand_id = $1
+    AND f.state = TRUE
 
       AND NOT EXISTS (
-
         SELECT 1
 
         FROM formula_components fc
@@ -79,64 +90,75 @@ export class FormulaModel {
 
         WHERE fc.formula_id = f.id
           AND c.state = FALSE
-
       )
-      `;
+  `;
 
     const values = [brand_id];
     let index = 2;
 
+    // Filter by formula name
     if (name) {
-      query += ` AND name ILIKE $${index}`;
+      query += ` AND f.name ILIKE $${index}`;
       values.push(`%${name}%`);
       index++;
     }
+
+    // Filter by final quantity
     if (quantity) {
-      query += ` AND final_quantity = $${index}`;
+      query += ` AND f.final_quantity = $${index}`;
       values.push(quantity);
       index++;
     }
 
-    query += ` ORDER BY id DESC LIMIT $${index} OFFSET $${index + 1}`;
+    query += `
+    ORDER BY f.id DESC
+    LIMIT $${index}
+    OFFSET $${index + 1}
+  `;
+
     values.push(limit, offset);
 
     const resultQuery = await pool.query(query, values);
 
-    // count query (same filters!)
+    // ---------------- COUNT ----------------
+
     let countQuery = `
-SELECT COUNT(*) AS total
+    SELECT COUNT(*) AS total
 
-FROM formulas f
+    FROM formulas f
 
-WHERE f.brand_id = $1
+    WHERE f.brand_id = $1 AND f.state = TRUE
 
-AND NOT EXISTS (
+      AND NOT EXISTS (
+        SELECT 1
 
-  SELECT 1
+        FROM formula_components fc
 
-  FROM formula_components fc
+        JOIN components c
+          ON c.id = fc.component_id
 
-  JOIN components c
-    ON c.id = fc.component_id
-
-  WHERE fc.formula_id = f.id
-    AND c.state = FALSE
-
-)
-`;
+        WHERE fc.formula_id = f.id
+          
+          AND c.state = FALSE
+      )
+  `;
 
     const countValues = [brand_id];
     index = 2;
-    console.log("SEGUIMOS BIEN 1", resultQuery);
 
     if (name) {
-      countQuery += ` AND name ILIKE $${index}`;
+      countQuery += ` AND f.name ILIKE $${index}`;
       countValues.push(`%${name}%`);
       index++;
     }
 
+    if (quantity) {
+      countQuery += ` AND f.final_quantity = $${index}`;
+      countValues.push(quantity);
+      index++;
+    }
+
     const countResult = await pool.query(countQuery, countValues);
-    console.log("SEGUIMOS BIEN 2", countResult);
 
     return {
       data: resultQuery.rows,
@@ -156,7 +178,7 @@ AND NOT EXISTS (
     return result.rows[0];
   }
 
-  static async listStockLocation({
+  static async listFormulaLocation({
     brand_id,
     location_id,
     page = 1,
@@ -170,7 +192,7 @@ AND NOT EXISTS (
     SELECT f.*
     FROM formulas f
     WHERE f.brand_id = $1
-
+    AND f.state = TRUE
     AND NOT EXISTS (
 
       SELECT 1
@@ -230,7 +252,7 @@ AND NOT EXISTS (
     FROM formulas f
 
     WHERE f.brand_id = $1
-
+    AND f.state = TRUE
     AND NOT EXISTS (
 
       SELECT 1

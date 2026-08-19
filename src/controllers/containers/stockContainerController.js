@@ -54,7 +54,7 @@ export class StockContainerController {
       console.error(error);
 
       return res.status(500).json({
-        error: "Internal server error",
+        error: error || "Internal server error",
       });
     }
   }
@@ -220,6 +220,7 @@ export class StockContainerController {
         registerLossStockContainerSchema,
         req.body,
       );
+      console.log("dATA", data);
       if (error) {
         return res.status(400).json({ error });
       }
@@ -277,7 +278,7 @@ export class StockContainerController {
         retrieveStockContainerSchema,
         req.query,
       );
-
+      console.log(data, "data");
       if (error) {
         return res.status(400).json({ error });
       }

@@ -54,3 +54,9 @@ stockContainerRouter.get(
   validateLocationAccess,
   StockContainerController.listStock,
 );
+stockContainerRouter.get(
+  "/retrieve",
+  authMiddleware,
+  validateLocationAccess,
+  StockContainerController.retrieveStockContainer,
+);

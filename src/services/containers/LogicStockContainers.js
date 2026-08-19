@@ -37,6 +37,7 @@ export class BussinesLogicStockContainer {
 
     // WEIGHT SYSTEM
     else {
+      console.log(unit);
       if (unit === "unit") {
         {
           return {

@@ -32,7 +32,32 @@ export class StockContainerModel {
   static async retrieveStockContainer({ stockId, location_id, container_id }) {
     console.log(stockId, location_id);
 
-    const query = `SELECT * FROM containers_stock WHERE id = $1 AND location_id = $2 AND container_id = $3`;
+    const query = `
+      SELECT
+          cs.*,
+
+          c.name AS container_name,
+
+          tc.name AS type_container_name,
+
+          l.name AS location_name
+
+      FROM containers_stock cs
+
+      JOIN containers c
+          ON c.id = cs.container_id
+
+      JOIN type_containers tc
+          ON tc.id = c.type_container_id
+
+      JOIN locations l
+          ON l.id = cs.location_id
+
+      WHERE cs.id = $1
+        AND cs.location_id = $2
+        AND cs.container_id = $3
+        AND c.state = true;
+      `;
     const values = [stockId, location_id, container_id];
 
     const result = await pool.query(query, values);
@@ -188,7 +213,9 @@ export class StockContainerModel {
       s.*,
 
       c.name AS container_name,
-
+      
+      c.capacity AS capacity,
+      c.unit AS unit,
       tc.name AS type_container_name,
 
       l.name AS location_name
