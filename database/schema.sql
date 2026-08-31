@@ -60,6 +60,8 @@ CREATE TABLE formulas (
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
   state BOOLEAN NOT NULL DEFAULT true,
+  consumer_price NUMERIC(12,0),
+  wholesale_price NUMERIC(12,0),
   PRIMARY KEY (id),
   CONSTRAINT fk_formula_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON UPDATE NO ACTION ON DELETE CASCADE
 );
@@ -84,10 +86,26 @@ CREATE TABLE locations (
 CREATE TABLE type_components (
   id INTEGER NOT NULL DEFAULT nextval('type_components_id_seq'::regclass),
   name VARCHAR(100) NOT NULL,
-  brand_id INTEGER NOT NULL,
   PRIMARY KEY (id),
-  CONSTRAINT fk_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON UPDATE NO ACTION ON DELETE CASCADE
+  CONSTRAINT uq_type_components_name UNIQUE (name)
 );
+
+-- Default global catalog: shared by every brand and location.
+-- Managed by SQL/seed only (there is no runtime API to create/edit/delete these).
+INSERT INTO type_components (name) VALUES
+  ('Esencias'),
+  ('Absolutos'),
+  ('Aromas'),
+  ('Fijadores'),
+  ('Feromonas'),
+  ('Alcohol'),
+  ('Diluyentes'),
+  ('Agua destilada'),
+  ('Solubilizantes'),
+  ('Conservantes'),
+  ('Antioxidantes'),
+  ('Colorantes'),
+  ('Resinas y bálsamos');
 
 -- ============================================
 -- Table: type_containers
@@ -114,7 +132,7 @@ CREATE TABLE components (
   brand_id INTEGER,
   state BOOLEAN NOT NULL DEFAULT true,
   PRIMARY KEY (id),
-  CONSTRAINT fk_type_component FOREIGN KEY (type_component_id) REFERENCES type_components(id) ON UPDATE NO ACTION ON DELETE CASCADE
+  CONSTRAINT fk_type_component FOREIGN KEY (type_component_id) REFERENCES type_components(id) ON UPDATE NO ACTION ON DELETE RESTRICT
 );
 
 CREATE INDEX idx_components_location ON public.components USING btree (type_component_id);

@@ -12,7 +12,6 @@ export class ComponentController {
   static async createComponent(req, res) {
     try {
       const { id: brandId } = req.brand;
-      const userId = req.user.id;
 
       // Validate body
       const { data, error } = validateSchema(createComponentSchemas, req.body);
@@ -21,15 +20,14 @@ export class ComponentController {
         return res.status(400).json({ error });
       }
 
-      // Validate ownership
+      // Validate the referenced global type exists
       const typeComponent = await AccessService.validateTypeComponentAccess({
         typeComponentId: data.type_component,
-        userId,
       });
 
       if (!typeComponent) {
-        return res.status(403).json({
-          error: "Unauthorized type component",
+        return res.status(400).json({
+          error: "Invalid type component",
         });
       }
 
@@ -88,22 +86,20 @@ export class ComponentController {
   static async updateComponent(req, res) {
     try {
       const { id: brandId } = req.brand;
-      const userId = req.user.id;
 
       const { data, error } = validateSchema(updateComponentSchemas, req.body);
 
       if (error) {
         return res.status(400).json({ error });
       }
-      // Validate ownership
+      // Validate the referenced global type exists
       const typeComponent = await AccessService.validateTypeComponentAccess({
         typeComponentId: data.type_component,
-        userId,
       });
 
       if (!typeComponent) {
-        return res.status(403).json({
-          error: "Unauthorized type component",
+        return res.status(400).json({
+          error: "Invalid type component",
         });
       }
 

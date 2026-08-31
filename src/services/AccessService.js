@@ -62,29 +62,15 @@ export class AccessService {
     };
   }
 
-  // Validate if the type component belongs of user session
-  static async validateTypeComponentAccess({ typeComponentId, userId }) {
-    console.log(
-      typeComponentId,
-      userId,
-      "asssssssssssssssssssssssssssssssssssssss",
-    );
-    const query = `
-     SELECT tc.*
-      FROM type_components tc
-      JOIN brands b ON tc.brand_id = b.id
-      WHERE tc.id = $1
-        AND b.user_id = $2;
-    `;
-
-    const values = [typeComponentId, userId];
-
-    const result = await pool.query(query, values);
+  // type_components is a global catalog: any authenticated user may reference any
+  // type. This only checks the referenced type actually exists.
+  static async validateTypeComponentAccess({ typeComponentId }) {
+    const query = `SELECT * FROM type_components WHERE id = $1`;
+    const result = await pool.query(query, [typeComponentId]);
 
     if (result.rowCount === 0) {
       return null;
     }
-    console.log(result.rows[0]);
 
     return result.rows[0];
   }

@@ -6,33 +6,12 @@ import { ComponentController } from "../../controllers/components/componentsCont
 
 export const componentRouter = Router();
 
-//typeComponents Routes
-componentRouter.post(
-  "/create-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeComponentsController.createTypeComponent,
-);
-
-componentRouter.delete(
-  "/delete-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeComponentsController.deleteTypeComponent,
-);
-
+// typeComponents Routes
+// type_components is a global, seed-managed catalog: listing only, no brand scope.
 componentRouter.get(
   "/list-type",
   authMiddleware,
-  validateBrandAccess,
   TypeComponentsController.ListTypeComponent,
-);
-
-componentRouter.post(
-  "/update-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeComponentsController.updateTypeComponent,
 );
 
 //ComponentRoutes--------------------------------------------------------
