@@ -1,5 +1,6 @@
 import { validateSchema } from "../../helpers/validateSchema.js";
 import { StockContainerModel } from "../../models/containers/stockContainerModel.js";
+import { StockContainerMovementModel } from "../../models/containers/stockContainerMovement.js";
 import { BussinesLogicStockContainer } from "../../services/containers/LogicStockContainers.js";
 import { StockContainerService } from "../../services/containers/stockContainerServices.js";
 import { BussinesLogicStock } from "../../services/stock/bussinesLogicStock.js";
@@ -8,6 +9,7 @@ import {
   createStockContainerSchema,
   deleteStockContainerSchema,
   ListStockContainerSchema,
+  ListContainerMovementSchema,
   registerLossStockContainerSchema,
   retrieveStockContainerSchema,
   updateStockContainerSchema,
@@ -329,6 +331,42 @@ export class StockContainerController {
       console.log(result, "result");
       if (!result) {
         return res.status(404).json({ error: "not fount Stock container" });
+      }
+      return res.status(200).json({
+        message: "LIST SUCCESSFULLY",
+        result,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  }
+
+  static async listMovements(req, res) {
+    try {
+      const { id: brandId } = req.brand;
+      const { data, error } = validateSchema(
+        ListContainerMovementSchema,
+        req.query,
+      );
+
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      const result = await StockContainerMovementModel.listMovements({
+        brand_id: brandId,
+        page: data.page,
+        limit: data.limit,
+        location: data.id,
+        movement_type: data.movement_type,
+        container_id: data.container_id,
+      });
+
+      if (!result) {
+        return res.status(404).json({ error: "not fount Movements" });
       }
       return res.status(200).json({
         message: "LIST SUCCESSFULLY",

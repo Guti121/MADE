@@ -58,3 +58,10 @@ stockRouter.get(
   validateLocationAccess,
   StockController.retrieveStock,
 );
+
+stockRouter.get(
+  "/movements/list",
+  authMiddleware,
+  validateBrandAccess,
+  StockController.listMovements,
+);

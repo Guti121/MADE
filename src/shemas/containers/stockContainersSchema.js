@@ -74,6 +74,14 @@ export const ListStockContainerSchema = z.object({
   id: z.string().optional(),
   type_container: z.coerce.number().optional(),
 });
+
+export const ListContainerMovementSchema = z.object({
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(10),
+  id: z.coerce.number().optional(),
+  movement_type: z.string().optional(),
+  container_id: z.coerce.number().optional(),
+});
 // StockService.addStock()
 
 // StockService.registerLoss()

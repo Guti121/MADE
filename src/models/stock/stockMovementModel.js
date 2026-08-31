@@ -1,3 +1,5 @@
+import { pool } from "../../config/db.js";
+
 export class StockMovementModel {
   static async createMovement(client, data) {
     const query = `
@@ -37,5 +39,148 @@ export class StockMovementModel {
     const result = await client.query(query, values);
 
     return result.rows[0];
+  }
+
+  static async listMovements({
+    brand_id,
+    page = 1,
+    limit = 10,
+    location,
+    movement_type,
+    component_id,
+  }) {
+    const offset = (page - 1) * limit;
+
+    let query = `
+    SELECT
+      sm.*,
+
+      c.name AS component_name,
+
+      l.name AS location_name
+
+    FROM stock_movements sm
+
+    JOIN stock s
+      ON s.id = sm.stock_id
+
+    JOIN components c
+      ON c.id = s.component_id
+
+    JOIN locations l
+      ON l.id = sm.location_id
+
+    WHERE c.brand_id = $1
+  `;
+
+    const values = [brand_id];
+
+    let index = 2;
+
+    // FILTER BY LOCATION
+    if (location) {
+      query += ` AND sm.location_id = $${index}`;
+
+      values.push(location);
+
+      index++;
+    }
+
+    // FILTER BY MOVEMENT TYPE
+    if (movement_type) {
+      query += ` AND sm.movement_type = $${index}`;
+
+      values.push(movement_type);
+
+      index++;
+    }
+
+    // FILTER BY COMPONENT
+    if (component_id) {
+      query += ` AND s.component_id = $${index}`;
+
+      values.push(component_id);
+
+      index++;
+    }
+
+    query += `
+    ORDER BY sm.created_at DESC
+
+    LIMIT $${index}
+
+    OFFSET $${index + 1}
+  `;
+
+    values.push(limit, offset);
+
+    const resultQuery = await pool.query(query, values);
+
+    // COUNT QUERY
+
+    let countQuery = `
+    SELECT COUNT(*) AS total
+
+    FROM stock_movements sm
+
+    JOIN stock s
+      ON s.id = sm.stock_id
+
+    JOIN components c
+      ON c.id = s.component_id
+
+    JOIN locations l
+      ON l.id = sm.location_id
+
+    WHERE c.brand_id = $1
+  `;
+
+    const countValues = [brand_id];
+
+    index = 2;
+
+    if (location) {
+      countQuery += `
+      AND sm.location_id = $${index}
+    `;
+
+      countValues.push(location);
+
+      index++;
+    }
+
+    if (movement_type) {
+      countQuery += `
+      AND sm.movement_type = $${index}
+    `;
+
+      countValues.push(movement_type);
+
+      index++;
+    }
+
+    if (component_id) {
+      countQuery += `
+      AND s.component_id = $${index}
+    `;
+
+      countValues.push(component_id);
+
+      index++;
+    }
+
+    const countResult = await pool.query(countQuery, countValues);
+
+    return {
+      data: resultQuery.rows,
+
+      total: Number(countResult.rows[0].total),
+
+      page,
+
+      limit,
+
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
+    };
   }
 }

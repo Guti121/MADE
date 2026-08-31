@@ -60,3 +60,10 @@ stockContainerRouter.get(
   validateLocationAccess,
   StockContainerController.retrieveStockContainer,
 );
+
+stockContainerRouter.get(
+  "/movements/list",
+  authMiddleware,
+  validateBrandAccess,
+  StockContainerController.listMovements,
+);
