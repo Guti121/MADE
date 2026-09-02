@@ -3,6 +3,16 @@ import { pool } from "../../config/db.js";
 export class TypeComponentesModel {
   // type_components is a global catalog shared by every brand/location.
   // It is managed by SQL/seed only, so this model exposes read access only.
+
+  // Resolve a well-known type by its stable `code` (e.g. 'ESSENCE').
+  static async findByCode(code) {
+    const result = await pool.query(
+      "SELECT * FROM type_components WHERE code = $1",
+      [code],
+    );
+    return result.rows[0] ?? null;
+  }
+
   static async listTypeComponent({ page = 1, limit = 10, name }) {
     const offset = (page - 1) * limit;
 

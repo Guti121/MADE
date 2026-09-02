@@ -2,7 +2,7 @@ import { pool } from "../../config/db.js";
 import { FormulaModel } from "../../models/formula/formulaModel.js";
 
 export class FormulaService {
-  static async createFormula({ userId, brandId, data, convertUnit }) {
+  static async createFormula({ userId, brandId, data, lines }) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -11,16 +11,16 @@ export class FormulaService {
         userId,
         brandId,
         data,
-        convertUnit,
+        lines,
       });
 
       if (!formula) {
         throw new Error("Formula has error");
       }
-      console.log(formula);
+
       const components = await FormulaModel.createFormulaComponent(client, {
         formulaId: formula.id,
-        convertUnit,
+        lines,
       });
 
       await client.query("COMMIT");

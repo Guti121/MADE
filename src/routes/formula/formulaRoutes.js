@@ -10,6 +10,13 @@ import { FormulaComponentsController } from "../../controllers/formula/formulaCo
 export const formulaRouter = Router();
 
 formulaRouter.post(
+  "/preview",
+  authMiddleware,
+  validateBrandAccess,
+  formulaController.previewFormula,
+);
+
+formulaRouter.post(
   "/create",
   authMiddleware,
   validateBrandAccess,

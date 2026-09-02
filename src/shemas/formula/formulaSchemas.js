@@ -1,23 +1,37 @@
 import { z } from "zod";
 
-export const createFormulaSchema = z.object({
-  name: z.string().min(1),
+const lineSchema = z.object({
+  component_id: z.coerce.number().int().positive(),
 
   quantity: z.coerce.number().positive(),
 
-  container_id: z.coerce.number().optional(),
+  unit: z.string().min(1),
+});
 
-  components: z
-    .array(
-      z.object({
-        component_id: z.coerce.number(),
+const essenceSchema = z.object({
+  quantity: z.coerce.number().positive(),
 
-        quantity: z.coerce.number().positive(),
+  unit: z.string().min(1),
+});
 
-        unit: z.string().min(1),
-      }),
-    )
-    .min(1, "At least one component is required"),
+export const previewFormulaSchema = z.object({
+  essence: essenceSchema,
+
+  components: z.array(lineSchema).default([]),
+});
+
+export const createFormulaSchema = z.object({
+  name: z.string().min(1),
+
+  container_id: z.coerce.number().int().positive().optional(),
+
+  wholesale_price: z.coerce.number().nonnegative().optional(),
+
+  consumer_price: z.coerce.number().nonnegative().optional(),
+
+  essence: essenceSchema,
+
+  components: z.array(lineSchema).default([]),
 });
 
 export const deleteFormulaSchema = z.object({

@@ -2,34 +2,84 @@ import { validateSchema } from "../../helpers/validateSchema.js";
 import { FormulaModel } from "../../models/formula/formulaModel.js";
 import { BussinesLogicFormula } from "../../services/formula/bussinesLogicFormula.js";
 import { FormulaService } from "../../services/formula/formulaService.js";
-import { BussinesLogicStock } from "../../services/stock/bussinesLogicStock.js";
 import {
   createFormulaSchema,
   deleteFormulaSchema,
   ListFormulaSchema,
   ListFormulaSchemalocation,
-  retrieveFormulaComponentsSchema,
+  previewFormulaSchema,
 } from "../../shemas/formula/formulaSchemas.js";
 
 export class formulaController {
+  // Estimated build cost from the multi-location average component price.
+  // Shown to the user while building a formula so they can set its prices.
+  static async previewFormula(req, res) {
+    try {
+      const { id: userId } = req.user;
+      const { data, error } = validateSchema(previewFormulaSchema, req.body);
+
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      const lines = await BussinesLogicFormula.buildFormulaLines({
+        data,
+        userId,
+      });
+
+      return res.status(200).json({
+        message: "FORMULA PREVIEW",
+        result: {
+          essence: {
+            type: lines.essenceLine.type_name,
+            quantityInBase: lines.essenceLine.quantityInBase,
+            unit: lines.essenceLine.unit,
+            cost: null,
+            note: "Sin coste por ahora; se define al facturar la esencia concreta",
+          },
+          components: lines.componentLines.map((c) => ({
+            component_id: c.component_id,
+            name: c.name,
+            quantityInBase: c.quantityInBase,
+            unit: c.unit,
+            avg_cost_per_base: c.avg_cost_per_base,
+            sedes_con_stock: c.sedes_con_stock,
+            line_cost: c.line_cost,
+            has_price: c.has_price,
+          })),
+          totales: {
+            base_quantity: lines.sumTotalUnits,
+            costo_total: lines.costoTotal,
+            componentes_sin_precio: lines.componentesSinPrecio,
+          },
+        },
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(400).json({ error: "Error with preview" });
+    }
+  }
+
   static async createFormula(req, res) {
     try {
       const { id: userId } = req.user;
       const { id: brandId } = req.brand;
       const { data, error } = validateSchema(createFormulaSchema, req.body);
 
-      const convertUnit = await BussinesLogicFormula.convertUnitComponents({
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      const lines = await BussinesLogicFormula.buildFormulaLines({
         data,
         userId,
       });
-
-      console.log(convertUnit);
 
       const result = await FormulaService.createFormula({
         userId,
         brandId,
         data,
-        convertUnit,
+        lines,
       });
 
       if (!result) {
@@ -38,13 +88,13 @@ export class formulaController {
         });
       }
 
-      res.status(201).json({
+      return res.status(201).json({
         message: "FORMULA CREATED",
         result,
       });
     } catch (error) {
       console.log(error);
-      res.status(400).json({ error: "Error with creation" });
+      return res.status(400).json({ error: "Error with creation" });
     }
   }
 

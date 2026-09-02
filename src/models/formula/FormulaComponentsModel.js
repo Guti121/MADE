@@ -4,46 +4,64 @@ export class FormulaComponentsModel {
   static async retrieveComponents({ brandId, data }) {
     const query = `
     SELECT
-    c.id ,
-  fc.formula_id,
-  fc.quantity,
-  fc.unit,
+      fc.id,
+      fc.formula_id,
+      fc.component_id,
+      fc.type_component_id,
+      fc.quantity,
+      fc.unit,
 
-  f.name AS formula_name,
-  f.final_quantity AS final_quantity,
+      f.name AS formula_name,
+      f.final_quantity AS final_quantity,
+      f.wholesale_price AS formula_wholesale_price,
+      f.consumer_price AS formula_consumer_price,
 
-  c.name AS component_name,
+      c.name AS component_name,
+      tc.name AS type_component_name,
 
-  s.avg_price,
-  s.wholesale_price,
-  s.consumer_price
+      sp.avg_price,
+      sp.wholesale_price,
+      sp.consumer_price,
+      sp.sedes_con_stock
 
-FROM formula_components fc
+    FROM formula_components fc
 
-JOIN formulas f
-  ON fc.formula_id = f.id
+    JOIN formulas f
+      ON fc.formula_id = f.id
 
-JOIN components c
-  ON fc.component_id = c.id
+    LEFT JOIN components c
+      ON fc.component_id = c.id
 
-JOIN stock s
-  ON s.component_id = c.id
+    LEFT JOIN type_components tc
+      ON fc.type_component_id = tc.id
 
-WHERE f.brand_id = $1
-  AND f.state = TRUE
-  AND fc.formula_id = $2
+    LEFT JOIN LATERAL (
+      SELECT
+        AVG(s.avg_price)       AS avg_price,
+        AVG(s.wholesale_price) AS wholesale_price,
+        AVG(s.consumer_price)  AS consumer_price,
+        COUNT(*)               AS sedes_con_stock
+      FROM stock s
+      WHERE s.component_id = fc.component_id
+        AND s.state = true
+    ) sp ON true
 
-  AND NOT EXISTS (
-    SELECT 1
+    WHERE f.brand_id = $1
+      AND f.state = TRUE
+      AND fc.formula_id = $2
 
-    FROM formula_components fc2
+      AND NOT EXISTS (
+        SELECT 1
 
-    JOIN components c2
-      ON c2.id = fc2.component_id
+        FROM formula_components fc2
 
-    WHERE fc2.formula_id = f.id
-      AND c2.state = FALSE
-  )
+        JOIN components c2
+          ON c2.id = fc2.component_id
+
+        WHERE fc2.formula_id = f.id
+          AND fc2.component_id IS NOT NULL
+          AND c2.state = FALSE
+      )
   `;
 
     const values = [brandId, data.id];

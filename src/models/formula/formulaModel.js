@@ -1,17 +1,20 @@
 import { pool } from "../../config/db.js";
 
 export class FormulaModel {
-  static async createFormula(client, { userId, brandId, data, convertUnit }) {
-    const query = `INSERT INTO formulas (name, brand_id, final_quantity,unit,container_id,created_by) 
-        VALUES($1,$2,$3,$4,$5,$6) RETURNING *`;
+  static async createFormula(client, { userId, brandId, data, lines }) {
+    const query = `INSERT INTO formulas
+        (name, brand_id, final_quantity, unit, container_id, created_by, wholesale_price, consumer_price)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`;
 
     const values = [
       data.name,
       brandId,
-      convertUnit.sumTotalUnits,
-      convertUnit.listComponents[0].unit,
-      data.container || null,
+      lines.sumTotalUnits,
+      lines.essenceLine.unit,
+      data.container_id || null,
       userId,
+      data.wholesale_price ?? null,
+      data.consumer_price ?? null,
     ];
 
     const result = await client.query(query, values);
@@ -19,23 +22,36 @@ export class FormulaModel {
     return result.rows[0];
   }
 
-  static async createFormulaComponent(client, { formulaId, convertUnit }) {
+  static async createFormulaComponent(client, { formulaId, lines }) {
     const query = `
     INSERT INTO formula_components (
       formula_id,
       component_id,
+      type_component_id,
       quantity,
       unit
-    ) 
-    VALUES ($1, $2, $3, $4)
+    )
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING *;
   `;
-    let results = [];
+    const results = [];
 
-    for (const component of convertUnit.listComponents) {
+    // mandatory essence line: a type slot with no concrete component
+    const essence = await client.query(query, [
+      formulaId,
+      null,
+      lines.essenceLine.type_component_id,
+      lines.essenceLine.quantityInBase,
+      lines.essenceLine.unit,
+    ]);
+    results.push(essence.rows[0]);
+
+    // regular component lines
+    for (const component of lines.componentLines) {
       const values = [
         formulaId,
         component.component_id,
+        null,
         component.quantityInBase,
         component.unit,
       ];
@@ -89,6 +105,7 @@ export class FormulaModel {
           ON c.id = fc.component_id
 
         WHERE fc.formula_id = f.id
+          AND fc.component_id IS NOT NULL
           AND c.state = FALSE
       )
   `;
@@ -138,7 +155,7 @@ export class FormulaModel {
           ON c.id = fc.component_id
 
         WHERE fc.formula_id = f.id
-          
+          AND fc.component_id IS NOT NULL
           AND c.state = FALSE
       )
   `;
@@ -207,6 +224,7 @@ export class FormulaModel {
        AND s.location_id = $2
 
       WHERE fc.formula_id = f.id
+      AND fc.component_id IS NOT NULL
 
       AND (
             c.state = FALSE
@@ -267,6 +285,7 @@ export class FormulaModel {
        AND s.location_id = $2
 
       WHERE fc.formula_id = f.id
+      AND fc.component_id IS NOT NULL
 
       AND (
             c.state = FALSE

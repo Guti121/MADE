@@ -239,6 +239,25 @@ export class StockModel {
     return result.rows[0];
   }
 
+  // Simple average of the per-base-unit price across every location that
+  // stocks this component. Locations without a stock row are ignored.
+  // Returns { avg_cost_per_base: string|null, sedes_con_stock: string }.
+  static async avgPriceAcrossLocations({ componentId }) {
+    const query = `
+      SELECT
+        AVG(avg_price)       AS avg_cost_per_base,
+        AVG(wholesale_price) AS avg_wholesale_per_base,
+        AVG(consumer_price)  AS avg_consumer_per_base,
+        COUNT(*)             AS sedes_con_stock
+      FROM stock
+      WHERE component_id = $1
+        AND state = true
+    `;
+
+    const result = await pool.query(query, [componentId]);
+    return result.rows[0];
+  }
+
   static async listStock({
     brand_id,
     page = 1,

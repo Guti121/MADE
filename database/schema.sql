@@ -86,26 +86,28 @@ CREATE TABLE locations (
 CREATE TABLE type_components (
   id INTEGER NOT NULL DEFAULT nextval('type_components_id_seq'::regclass),
   name VARCHAR(100) NOT NULL,
+  code VARCHAR(30),
   PRIMARY KEY (id),
-  CONSTRAINT uq_type_components_name UNIQUE (name)
+  CONSTRAINT uq_type_components_name UNIQUE (name),
+  CONSTRAINT uq_type_components_code UNIQUE (code)
 );
 
 -- Default global catalog: shared by every brand and location.
 -- Managed by SQL/seed only (there is no runtime API to create/edit/delete these).
-INSERT INTO type_components (name) VALUES
-  ('Esencias'),
-  ('Absolutos'),
-  ('Aromas'),
-  ('Fijadores'),
-  ('Feromonas'),
-  ('Alcohol'),
-  ('Diluyentes'),
-  ('Agua destilada'),
-  ('Solubilizantes'),
-  ('Conservantes'),
-  ('Antioxidantes'),
-  ('Colorantes'),
-  ('Resinas y bálsamos');
+INSERT INTO type_components (name, code) VALUES
+  ('Esencias', 'ESSENCE'),
+  ('Absolutos', NULL),
+  ('Aromas', NULL),
+  ('Fijadores', NULL),
+  ('Feromonas', NULL),
+  ('Alcohol', NULL),
+  ('Diluyentes', NULL),
+  ('Agua destilada', NULL),
+  ('Solubilizantes', NULL),
+  ('Conservantes', NULL),
+  ('Antioxidantes', NULL),
+  ('Colorantes', NULL),
+  ('Resinas y bálsamos', NULL);
 
 -- ============================================
 -- Table: type_containers
@@ -225,11 +227,14 @@ CREATE TABLE containers_stock (
 CREATE TABLE formula_components (
   id INTEGER NOT NULL DEFAULT nextval('formula_components_id_seq'::regclass),
   formula_id INTEGER NOT NULL,
-  component_id INTEGER NOT NULL,
+  component_id INTEGER,
+  type_component_id INTEGER,
   quantity NUMERIC(12,2) NOT NULL,
   unit VARCHAR(10) NOT NULL,
   PRIMARY KEY (id),
+  CONSTRAINT chk_formula_line CHECK (component_id IS NOT NULL OR type_component_id IS NOT NULL),
   CONSTRAINT fk_formula_components_component FOREIGN KEY (component_id) REFERENCES components(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+  CONSTRAINT fk_formula_components_type_component FOREIGN KEY (type_component_id) REFERENCES type_components(id) ON UPDATE NO ACTION ON DELETE RESTRICT,
   CONSTRAINT fk_formula_components_formula FOREIGN KEY (formula_id) REFERENCES formulas(id) ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
