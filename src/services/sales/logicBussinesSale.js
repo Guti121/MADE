@@ -1,4 +1,5 @@
 import { StockModel } from "../../models/stock/stockModel.js";
+import { ComponentJarStockModel } from "../../models/stock/componentJarStockModel.js";
 import { StockContainerModel } from "../../models/containers/stockContainerModel.js";
 
 const money = (n) => Math.round(Number(n) || 0);
@@ -25,6 +26,7 @@ export class LogicBussinesSale {
     const neededComponent = new Map(); // component_id -> qty
     const neededContainer = new Map(); // container_id -> qty
     const stockCache = new Map();
+    const jarCache = new Map();
     const containerCache = new Map();
 
     const getStock = async (componentId) => {
@@ -36,6 +38,19 @@ export class LogicBussinesSale {
         stockCache.set(componentId, row || null);
       }
       return stockCache.get(componentId);
+    };
+
+    // Pricing (avg/wholesale/consumer price) still comes from bodega (`getStock`
+    // above); availability + the sale's decrement come from the jar instead.
+    const getJarStock = async (componentId) => {
+      if (!jarCache.has(componentId)) {
+        const row = await ComponentJarStockModel.retrieveByComponent({
+          component_id: componentId,
+          location_id: data.location_id,
+        });
+        jarCache.set(componentId, row || null);
+      }
+      return jarCache.get(componentId);
     };
 
     const getContainerStock = async (containerId) => {
@@ -274,12 +289,14 @@ export class LogicBussinesSale {
     }
 
     // ---- grouped stock validation ----
+    // A sale draws from the jar (the small "at hand" quantity), not bodega —
+    // bodega only moves via purchases or a manual transfer into the jar.
     for (const [componentId, needed] of neededComponent) {
-      const st = stockCache.get(componentId);
-      if (!st || Number(st.quantity_base) < needed) {
+      const jar = await getJarStock(componentId);
+      if (!jar || Number(jar.quantity_base) < needed) {
         throw httpError(
           400,
-          `Stock insuficiente para el componente ${componentId}`,
+          `Stock de tarro insuficiente para el componente ${componentId}, recarga el jar primero`,
         );
       }
     }

@@ -2,11 +2,11 @@ import { SaleItemModel } from "../../models/sales/saleItemModel.js";
 import { SaleItemComponentModel } from "../../models/sales/saleItemComponentModel.js";
 import { SaleItemContainerModel } from "../../models/sales/saleItemContainerModel.js";
 
-import { StockModel } from "../../models/stock/stockModel.js";
 import { StockContainerModel } from "../../models/containers/stockContainerModel.js";
 
-import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
 import { StockContainerMovementModel } from "../../models/containers/stockContainerMovement.js";
+import { ComponentJarStockModel } from "../../models/stock/componentJarStockModel.js";
+import { JarMovementModel } from "../../models/stock/jarMovementModel.js";
 import { SaleModel } from "../../models/sales/saleModel.js";
 import { pool } from "../../config/db.js";
 
@@ -53,17 +53,20 @@ export class SaleTransactionService {
             total_price: component.total_price,
           });
 
-          // DISCOUNT STOCK
-          const discountStock = await StockModel.discountStock(client, {
-            component_id: component.component_id,
-            location_id: data.location_id,
-            quantity: component.quantity_used,
-          });
+          // DISCOUNT JAR STOCK (a sale draws from the jar, not bodega)
+          const discountJar = await ComponentJarStockModel.discountStock(
+            client,
+            {
+              component_id: component.component_id,
+              location_id: data.location_id,
+              quantity: component.quantity_used,
+            },
+          );
 
-          // STOCK MOVEMENT
-          await StockMovementModel.createMovement(client, {
-            stock_id: discountStock.id,
-            location_id: discountStock.location_id,
+          // JAR MOVEMENT
+          await JarMovementModel.createMovement(client, {
+            jar_stock_id: discountJar.id,
+            location_id: discountJar.location_id,
             movement_type: "SALE",
             quantity: component.quantity_used,
             unit_price: component.unit_cost,

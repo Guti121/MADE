@@ -285,6 +285,48 @@ CREATE TABLE stock (
 );
 
 -- ============================================
+-- Table: component_jar_stock
+-- ============================================
+CREATE TABLE component_jar_stock (
+  id INTEGER NOT NULL DEFAULT nextval('component_jar_stock_id_seq'::regclass),
+  component_id INTEGER NOT NULL,
+  location_id INTEGER NOT NULL,
+  quantity_base NUMERIC(12,2) NOT NULL DEFAULT 0,
+  state BOOLEAN NOT NULL DEFAULT true,
+  created_by INTEGER NOT NULL,
+  updated_by INTEGER NOT NULL,
+  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT unique_jar_component_location UNIQUE (component_id, location_id),
+  CONSTRAINT fk_jar_stock_component FOREIGN KEY (component_id) REFERENCES components(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+  CONSTRAINT fk_jar_stock_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE SET NULL,
+  CONSTRAINT fk_jar_stock_location FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+  CONSTRAINT fk_jar_stock_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE SET NULL
+);
+
+-- ============================================
+-- Table: jar_movements
+-- ============================================
+CREATE TABLE jar_movements (
+  id INTEGER NOT NULL DEFAULT nextval('jar_movements_id_seq'::regclass),
+  jar_stock_id INTEGER NOT NULL,
+  movement_type VARCHAR(50) NOT NULL,
+  quantity NUMERIC(14,2) NOT NULL,
+  unit_price NUMERIC(14,2) NOT NULL DEFAULT 0,
+  total_price NUMERIC(14,2) NOT NULL DEFAULT 0,
+  reference_id INTEGER,
+  reference_type VARCHAR(50),
+  notes TEXT,
+  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER NOT NULL,
+  location_id INTEGER NOT NULL,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_jar_movement_stock FOREIGN KEY (jar_stock_id) REFERENCES component_jar_stock(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+  CONSTRAINT fk_jar_movement_user FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE RESTRICT
+);
+
+-- ============================================
 -- Table: container_movements
 -- ============================================
 CREATE TABLE container_movements (

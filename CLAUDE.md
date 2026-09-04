@@ -37,6 +37,10 @@ routes/  →  middleware  →  controllers/  →  services/  →  models/  →  
 
 Every stock/stock-container mutation writes two things inside one transaction: the updated quantity row, and an immutable movement record (`stockMovementModel` / `stockContainerMovement`) with a `movement_type` from a fixed vocabulary: `INITIAL_STOCK`, `PURCHASE`, `SALE`, `ADJUSTMENT` (or `ADJUSTMENT +`/`ADJUSTMENT -`), `LOSS`, `RETURN`. When adding new stock-affecting operations, preserve this audit-trail pattern rather than mutating quantity alone.
 
+### Jar stock (bodega vs. tarro)
+
+Each component also has a second, smaller stock tier per location: `component_jar_stock` (the "jar"/"tarro a la mano"), tracked separately from the bulk `stock` ("bodega") row. A sale decrements the jar (`ComponentJarStockModel.discountStock` + `JarMovementModel`, `movement_type: "SALE"`), never bodega directly — bodega only moves via purchases or a manual transfer into the jar (`JarStockService.transferToJar`, `POST /api/jar-stock/transfer`), which writes `TRANSFER_OUT` on the bodega side (`stock_movements`) and `TRANSFER_IN` on the jar side (`jar_movements`). Pricing (avg/wholesale/consumer price) still comes from bodega's `stock` row; the jar only tracks physical quantity. This split does not apply to containers — those stay bodega-only.
+
 ### Auth flow
 
 JWT-based, two tokens: a short-lived `access_token` (15m, signed with `SECRET_KEY_TOKEN`) and a longer-lived `refresh_token` (7d, signed with `REFRESH_TOKEN_SECRET`, persisted server-side and checked against the DB row on refresh so a token can be invalidated by deleting the session). Both are set as httpOnly, `sameSite: strict` cookies. Passwords are hashed with bcrypt (`SALT_ROUNDS`). `config/config.js` has a hardcoded fallback for `SECRET_KEY_TOKEN` used only when the env var is unset.
