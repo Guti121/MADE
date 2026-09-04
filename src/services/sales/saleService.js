@@ -1,10 +1,15 @@
 import { FormulaModel } from "../../models/formula/formulaModel.js";
+import { FormulaComponentsModel } from "../../models/formula/FormulaComponentsModel.js";
+import { AccessService } from "../AccessService.js";
 import { SaleModel } from "../../models/sales/saleModel.js";
 import { LogicBussinesSale } from "./logicBussinesSale.js";
 import { SaleTransactionService } from "./saleTransactionService.js";
 
 export class SaleService {
-  static async createSale({ userId, data, brandId }) {
+  // Resolve, per item, the formula + its lines + the chosen essence.
+  static async buildItemsContext({ userId, brandId, data }) {
+    const itemsContext = new Map();
+
     for (const item of data.sales_items) {
       const formula = await FormulaModel.retrieveModel({
         id: item.formula_id,
@@ -12,25 +17,52 @@ export class SaleService {
       });
 
       if (!formula) {
-        throw new Error(`Formula ${item.formula_id} not found`);
+        const err = new Error(`Formula ${item.formula_id} not found`);
+        err.status = 404;
+        throw err;
       }
+
+      const formulaLines = await FormulaComponentsModel.listByFormula(
+        formula.id,
+      );
+
+      const essence = await AccessService.validateEssenceComponent({
+        componentId: item.essence_component_id,
+        userId,
+      });
+
+      if (!essence) {
+        const err = new Error("Esencia inválida");
+        err.status = 400;
+        throw err;
+      }
+
+      itemsContext.set(item, { formula, formulaLines, essence });
     }
-    await LogicBussinesSale.validateStock({
+
+    return itemsContext;
+  }
+
+  // Price a sale without persisting it. Same computation as createSale.
+  static async previewSale({ userId, data, brandId }) {
+    const itemsContext = await this.buildItemsContext({ userId, brandId, data });
+    return LogicBussinesSale.processSale({ data, itemsContext });
+  }
+
+  static async createSale({ userId, data, brandId }) {
+    const itemsContext = await this.buildItemsContext({ userId, brandId, data });
+
+    const calculatedSale = await LogicBussinesSale.processSale({
       data,
+      itemsContext,
     });
 
-    const calculatedSale = await LogicBussinesSale.pricesComponents({
-      data,
-    });
-
-    // 4. Create transaction
-    const result = await SaleTransactionService.createSale({
+    const sale = await SaleTransactionService.createSale({
       userId,
       data: calculatedSale,
     });
-    console.log(calculatedSale);
 
-    return calculatedSale;
+    return sale;
   }
   static validateDateRange({ start_date, end_date }) {
     // No dates = no date filter

@@ -8,6 +8,32 @@ import {
 } from "../../shemas/sales/salesSchemas.js";
 
 export class SaleController {
+  static async previewSale(req, res) {
+    try {
+      const { id: userId } = req.user;
+      const { id: brandId } = req.brand;
+
+      const { data, error } = validateSchema(createSaleSchema, req.body);
+
+      if (error) {
+        return res.status(400).json({ error });
+      }
+
+      const result = await SaleService.previewSale({ userId, brandId, data });
+
+      return res.status(200).json({
+        message: "SALE PREVIEW",
+        result,
+      });
+    } catch (error) {
+      console.error(error);
+
+      return res.status(error.status || 500).json({
+        error: error.message || "Internal server error",
+      });
+    }
+  }
+
   static async createSale(req, res) {
     try {
       const { id: userId } = req.user;

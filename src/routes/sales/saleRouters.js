@@ -9,6 +9,14 @@ import { SaleController } from "../../controllers/sales/salesController.js";
 export const saleRouter = Router();
 
 saleRouter.post(
+  "/preview",
+  authMiddleware,
+  validateBrandAccess,
+  validateLocationAccess,
+  SaleController.previewSale,
+);
+
+saleRouter.post(
   "/create-sale",
   authMiddleware,
   validateBrandAccess,

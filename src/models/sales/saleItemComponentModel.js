@@ -4,6 +4,8 @@ export class SaleItemComponentModel {
       INSERT INTO sale_item_components (
         sale_item_id,
         component_id,
+        component_name_snapshot,
+        is_essence,
         quantity_used,
         unit_cost,
         unit_price,
@@ -11,7 +13,7 @@ export class SaleItemComponentModel {
         total_price
       )
       VALUES (
-        $1,$2,$3,$4,$5,$6,$7
+        $1,$2,$3,$4,$5,$6,$7,$8,$9
       )
       RETURNING *
     `;
@@ -19,6 +21,8 @@ export class SaleItemComponentModel {
     const values = [
       data.sale_item_id,
       data.component_id,
+      data.component_name_snapshot ?? null,
+      data.is_essence ?? false,
       data.quantity_used,
       data.unit_cost,
       data.unit_price,

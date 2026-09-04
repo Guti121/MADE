@@ -1,41 +1,47 @@
 import z from "zod";
 
-const saleComponentSchema = z.object({
-  component_id: z.coerce.number().positive(),
+// A quantity override for one formula line. Only the quantity can change, and it
+// is validated (>= the formula's quantity) in the service, not here.
+const lineOverrideSchema = z.object({
+  formula_component_id: z.coerce.number().positive(),
 
   quantity_used: z.coerce.number().positive(),
-
-  unit_price: z.coerce.number().nonnegative(),
 });
 
+// Optional container the user attaches to the sale item (charged in full).
 const saleContainerSchema = z.object({
   container_id: z.coerce.number().positive(),
 
   quantity_used: z.coerce.number().positive(),
-
-  unit_price: z.coerce.number().nonnegative(),
 });
 
 const saleItemSchema = z.object({
   formula_id: z.coerce.number().positive(),
 
-  quantity: z.coerce.number().positive(),
+  // Number of identical finished units produced from the formula.
+  quantity: z.coerce.number().positive().default(1),
+
+  // Chosen essence component (validated as type ESSENCE in the service).
+  essence_component_id: z.coerce.number().positive(),
+
+  // Essence amount per finished unit. Defaults to the formula's essence quantity;
+  // must be >= it (checked in the service).
+  essence_quantity_used: z.coerce.number().positive().optional(),
+
+  // Only increases: quantity per finished unit, >= the formula line quantity.
+  line_overrides: z.array(lineOverrideSchema).default([]),
 
   discount: z.coerce.number().min(0).default(0),
 
   tax: z.coerce.number().min(0).default(0),
 
-  sales_components: z.array(saleComponentSchema).default([]),
-
-  sales_container: saleContainerSchema,
+  sales_container: saleContainerSchema.optional(),
 });
 
 export const createSaleSchema = z.object({
   location_id: z.coerce.number().positive(),
 
-  formula_name_snapshot: z.string().min(5),
-
-  client_id: z.coerce.number().positive(),
+  client_id: z.coerce.number().positive().optional(),
 
   is_wholesale: z.boolean().default(false),
 

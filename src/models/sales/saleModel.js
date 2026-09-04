@@ -277,9 +277,9 @@ export class SaleModel {
       `
     SELECT
       sic.*,
-      c.name AS component_name
+      COALESCE(c.name, sic.component_name_snapshot) AS component_name
     FROM sale_item_components sic
-    JOIN components c
+    LEFT JOIN components c
       ON c.id = sic.component_id
     WHERE sic.sale_item_id = ANY($1)
     `,
@@ -290,9 +290,9 @@ export class SaleModel {
       `
     SELECT
       sit.*,
-      c.name AS container_name
+      COALESCE(c.name, sit.container_name_snapshot) AS container_name
     FROM sale_item_containers sit
-    JOIN containers c
+    LEFT JOIN containers c
       ON c.id = sit.container_id
     WHERE sit.sale_item_id = ANY($1)
     `,

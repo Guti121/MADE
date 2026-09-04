@@ -1,11 +1,12 @@
-import { SaleItemModel } from "../../models/sales/SaleItemModel.js";
-import { SaleItemComponentModel } from "../../models/sales/SaleItemComponentModel.js";
-import { SaleItemContainerModel } from "../../models/sales/SaleItemContainerModel.js";
+import { SaleItemModel } from "../../models/sales/saleItemModel.js";
+import { SaleItemComponentModel } from "../../models/sales/saleItemComponentModel.js";
+import { SaleItemContainerModel } from "../../models/sales/saleItemContainerModel.js";
 
 import { StockModel } from "../../models/stock/stockModel.js";
 import { StockContainerModel } from "../../models/containers/stockContainerModel.js";
 
-import { StockMovementModel } from "../../models/stock/StockMovementModel.js";
+import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
+import { StockContainerMovementModel } from "../../models/containers/stockContainerMovement.js";
 import { SaleModel } from "../../models/sales/saleModel.js";
 import { pool } from "../../config/db.js";
 
@@ -34,15 +35,17 @@ export class SaleTransactionService {
           discount: item.discount,
           tax: item.tax,
           total_cost: item.total_cost,
-          created_by: userId,
+          formula_unit_price: item.formula_unit_price,
+          formula_base_price: item.formula_base_price,
         });
 
-        // COMPONENTS
+        // COMPONENTS (includes the chosen essence, is_essence = true)
         for (const component of item.sales_components) {
           await SaleItemComponentModel.createComponent(client, {
             sale_item_id: saleItem.id,
             component_id: component.component_id,
             component_name_snapshot: component.component_name_snapshot,
+            is_essence: component.is_essence,
             quantity_used: component.quantity_used,
             unit_cost: component.unit_cost,
             unit_price: component.unit_price,
@@ -56,7 +59,7 @@ export class SaleTransactionService {
             location_id: data.location_id,
             quantity: component.quantity_used,
           });
-          console.log(component.stock_id);
+
           // STOCK MOVEMENT
           await StockMovementModel.createMovement(client, {
             stock_id: discountStock.id,
@@ -65,36 +68,48 @@ export class SaleTransactionService {
             quantity: component.quantity_used,
             unit_price: component.unit_cost,
             total_price: component.total_cost,
+            reference_id: sale.id,
+            reference_type: "SALE",
             created_by: userId,
           });
         }
 
-        // CONTAINER
+        // CONTAINER (optional, one per item)
         if (item.sales_container) {
           await SaleItemContainerModel.createContainer(client, {
             sale_item_id: saleItem.id,
             container_id: item.sales_container.container_id,
             container_name_snapshot:
               item.sales_container.container_name_snapshot,
-
             quantity_used: item.sales_container.quantity_used,
-
             unit_cost: item.sales_container.unit_cost,
-
             unit_price: item.sales_container.unit_price,
-
             total_cost: item.sales_container.total_cost,
-
             total_price: item.sales_container.total_price,
           });
 
           // DISCOUNT CONTAINER STOCK
-          await StockContainerModel.discountStock(client, {
-            container_id: item.sales_container.container_id,
+          const discountContainer = await StockContainerModel.discountStock(
+            client,
+            {
+              container_id: item.sales_container.container_id,
+              location_id: data.location_id,
+              quantity: item.sales_container.quantity_used,
+            },
+          );
 
-            location_id: data.location_id,
-
+          // CONTAINER MOVEMENT
+          await StockContainerMovementModel.createMovement(client, {
+            stock_id: discountContainer.id,
+            container_id: discountContainer.container_id,
+            location_id: discountContainer.location_id,
+            movement_type: "SALE",
             quantity: item.sales_container.quantity_used,
+            unit_price: item.sales_container.unit_cost,
+            total_price: item.sales_container.total_cost,
+            reference_id: sale.id,
+            reference_type: "SALE",
+            created_by: userId,
           });
         }
       }
@@ -103,7 +118,6 @@ export class SaleTransactionService {
 
       return sale;
     } catch (error) {
-      console.log(error);
       await client.query("ROLLBACK");
 
       throw error;

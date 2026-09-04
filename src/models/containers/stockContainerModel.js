@@ -137,10 +137,11 @@ export class StockContainerModel {
   }
   static async retrieveByContainer({ container_id, location_id }) {
     const query = `
-    SELECT *
-    FROM containers_stock
-    WHERE container_id = $1
-      AND location_id = $2
+    SELECT cs.*, c.name AS container_name
+    FROM containers_stock cs
+    JOIN containers c ON c.id = cs.container_id
+    WHERE cs.container_id = $1
+      AND cs.location_id = $2
   `;
 
     const values = [container_id, location_id];

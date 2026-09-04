@@ -101,6 +101,28 @@ export class AccessService {
     return result.rows[0];
   }
 
+  // Validate that a component is a usable ESSENCE for this user: active, owned by
+  // the user's brand, and of the global type flagged with code = 'ESSENCE'.
+  static async validateEssenceComponent({ componentId, userId }) {
+    const query = `
+      SELECT c.*
+      FROM components c
+      JOIN brands b ON c.brand_id = b.id
+      JOIN type_components tc ON tc.id = c.type_component_id
+      WHERE c.id = $1
+        AND b.user_id = $2
+        AND c.state = true
+        AND tc.code = 'ESSENCE';
+    `;
+    const result = await pool.query(query, [componentId, userId]);
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    return result.rows[0];
+  }
+
   static async validateComponentAccess({ componentId, userId }) {
     const query = `
      SELECT c.*
