@@ -1,7 +1,7 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
 
 export class JarMovementModel {
-  static async createMovement(client, data) {
+  static async createMovement (client, data) {
     const query = `
       INSERT INTO jar_movements (
         jar_stock_id,
@@ -19,7 +19,7 @@ export class JarMovementModel {
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
       )
       RETURNING *
-    `;
+    `
 
     const values = [
       data.jar_stock_id,
@@ -31,23 +31,23 @@ export class JarMovementModel {
       data.reason || null,
       data.reference_id || null,
       data.reference_type || null,
-      data.created_by,
-    ];
+      data.created_by
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async listMovements({
+  static async listMovements ({
     brand_id,
     page = 1,
     limit = 10,
     location,
     movement_type,
-    component_id,
+    component_id
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT
@@ -69,34 +69,34 @@ export class JarMovementModel {
       ON l.id = jm.location_id
 
     WHERE c.brand_id = $1
-  `;
+  `
 
-    const values = [brand_id];
+    const values = [brand_id]
 
-    let index = 2;
+    let index = 2
 
     if (location) {
-      query += ` AND jm.location_id = $${index}`;
+      query += ` AND jm.location_id = $${index}`
 
-      values.push(location);
+      values.push(location)
 
-      index++;
+      index++
     }
 
     if (movement_type) {
-      query += ` AND jm.movement_type = $${index}`;
+      query += ` AND jm.movement_type = $${index}`
 
-      values.push(movement_type);
+      values.push(movement_type)
 
-      index++;
+      index++
     }
 
     if (component_id) {
-      query += ` AND js.component_id = $${index}`;
+      query += ` AND js.component_id = $${index}`
 
-      values.push(component_id);
+      values.push(component_id)
 
-      index++;
+      index++
     }
 
     query += `
@@ -105,11 +105,11 @@ export class JarMovementModel {
     LIMIT $${index}
 
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     let countQuery = `
     SELECT COUNT(*) AS total
@@ -126,37 +126,37 @@ export class JarMovementModel {
       ON l.id = jm.location_id
 
     WHERE c.brand_id = $1
-  `;
+  `
 
-    const countValues = [brand_id];
+    const countValues = [brand_id]
 
-    index = 2;
+    index = 2
 
     if (location) {
-      countQuery += ` AND jm.location_id = $${index}`;
+      countQuery += ` AND jm.location_id = $${index}`
 
-      countValues.push(location);
+      countValues.push(location)
 
-      index++;
+      index++
     }
 
     if (movement_type) {
-      countQuery += ` AND jm.movement_type = $${index}`;
+      countQuery += ` AND jm.movement_type = $${index}`
 
-      countValues.push(movement_type);
+      countValues.push(movement_type)
 
-      index++;
+      index++
     }
 
     if (component_id) {
-      countQuery += ` AND js.component_id = $${index}`;
+      countQuery += ` AND js.component_id = $${index}`
 
-      countValues.push(component_id);
+      countValues.push(component_id)
 
-      index++;
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
@@ -167,7 +167,7 @@ export class JarMovementModel {
 
       limit,
 
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

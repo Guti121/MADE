@@ -1,67 +1,78 @@
-import { Router } from "express";
-import { authMiddleware } from "../../middleware/authMiddleware.js";
+import { Router } from 'express'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
 import {
   validateBrandAccess,
   validateComponentAccess,
-  validateLocationAccess,
-} from "../../middleware/accessMiddleware.js";
-import { StockController } from "../../controllers/stock/stockController.js";
+  validateLocationAccess
+} from '../../middleware/accessMiddleware.js'
+import { requireRole } from '../../middleware/roleMiddleware.js'
+import { StockController } from '../../controllers/stock/stockController.js'
 
-export const stockRouter = Router();
+export const stockRouter = Router()
+
+const owner = requireRole('owner', 'admin')
 
 stockRouter.post(
-  "/create",
+  '/create',
   authMiddleware,
+  owner,
   validateLocationAccess,
   validateComponentAccess,
-  StockController.createStock,
-);
+  StockController.createStock
+)
 
 stockRouter.delete(
-  "/delete",
+  '/delete',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockController.deleteStock,
-);
+  StockController.deleteStock
+)
 
 stockRouter.post(
-  "/update",
+  '/update',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockController.updateStock,
-);
+  validateComponentAccess,
+  StockController.updateStock
+)
 
 stockRouter.post(
-  "/register-loss",
+  '/register-loss',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockController.registerLoss,
-);
+  validateComponentAccess,
+  StockController.registerLoss
+)
 
 stockRouter.post(
-  "/register-adjustment",
+  '/register-adjustment',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockController.registerAdjustment,
-);
+  validateComponentAccess,
+  StockController.registerAdjustment
+)
 
 stockRouter.get(
-  "/list",
+  '/list',
   authMiddleware,
   validateBrandAccess,
   validateLocationAccess,
-  StockController.listStock,
-);
+  StockController.listStock
+)
 stockRouter.get(
-  "/retrieve",
+  '/retrieve',
   authMiddleware,
   validateLocationAccess,
-  StockController.retrieveStock,
-);
+  StockController.retrieveStock
+)
 
 stockRouter.get(
-  "/movements/list",
+  '/movements/list',
   authMiddleware,
   validateBrandAccess,
-  StockController.listMovements,
-);
+  StockController.listMovements
+)

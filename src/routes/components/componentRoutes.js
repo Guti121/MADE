@@ -1,41 +1,45 @@
-import { Router } from "express";
-import { TypeComponentsController } from "../../controllers/components/typeComponentsContoller.js";
-import { authMiddleware } from "../../middleware/authMiddleware.js";
-import { validateBrandAccess } from "../../middleware/accessMiddleware.js";
-import { ComponentController } from "../../controllers/components/componentsController.js";
+import { Router } from 'express'
+import { TypeComponentsController } from '../../controllers/components/typeComponentsContoller.js'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
+import { validateBrandAccess } from '../../middleware/accessMiddleware.js'
+import { requireRole } from '../../middleware/roleMiddleware.js'
+import { ComponentController } from '../../controllers/components/componentsController.js'
 
-export const componentRouter = Router();
+export const componentRouter = Router()
 
-// typeComponents Routes
 // type_components is a global, seed-managed catalog: listing only, no brand scope.
 componentRouter.get(
-  "/list-type",
+  '/list-type',
   authMiddleware,
-  TypeComponentsController.ListTypeComponent,
-);
+  TypeComponentsController.ListTypeComponent
+)
 
-//ComponentRoutes--------------------------------------------------------
 componentRouter.post(
-  "/create",
+  '/create',
   authMiddleware,
+  requireRole('owner', 'admin'),
   validateBrandAccess,
-  ComponentController.createComponent,
-);
+  ComponentController.createComponent
+)
+// NOTE: still GET for frontend compatibility (state change via GET — L1).
+// CSRF is contained by sameSite:strict cookies + the CORS allowlist.
 componentRouter.get(
-  "/delete/:id",
+  '/delete/:id',
   authMiddleware,
+  requireRole('owner', 'admin'),
   validateBrandAccess,
-  ComponentController.deleteComponent,
-);
+  ComponentController.deleteComponent
+)
 componentRouter.post(
-  "/update",
+  '/update',
   authMiddleware,
+  requireRole('owner', 'admin'),
   validateBrandAccess,
-  ComponentController.updateComponent,
-);
+  ComponentController.updateComponent
+)
 componentRouter.get(
-  "/list",
+  '/list',
   authMiddleware,
   validateBrandAccess,
-  ComponentController.listComponent,
-);
+  ComponentController.listComponent
+)

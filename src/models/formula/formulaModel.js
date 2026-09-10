@@ -1,10 +1,10 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
 
 export class FormulaModel {
-  static async createFormula(client, { userId, brandId, data, lines }) {
+  static async createFormula (client, { userId, brandId, data, lines }) {
     const query = `INSERT INTO formulas
         (name, brand_id, final_quantity, unit, container_id, created_by, wholesale_price, consumer_price)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`;
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`
 
     const values = [
       data.name,
@@ -14,15 +14,15 @@ export class FormulaModel {
       data.container_id || null,
       userId,
       data.wholesale_price ?? null,
-      data.consumer_price ?? null,
-    ];
+      data.consumer_price ?? null
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async createFormulaComponent(client, { formulaId, lines }) {
+  static async createFormulaComponent (client, { formulaId, lines }) {
     const query = `
     INSERT INTO formula_components (
       formula_id,
@@ -33,8 +33,8 @@ export class FormulaModel {
     )
     VALUES ($1, $2, $3, $4, $5)
     RETURNING *;
-  `;
-    const results = [];
+  `
+    const results = []
 
     // mandatory essence line: a type slot with no concrete component
     const essence = await client.query(query, [
@@ -42,9 +42,9 @@ export class FormulaModel {
       null,
       lines.essenceLine.type_component_id,
       lines.essenceLine.quantityInBase,
-      lines.essenceLine.unit,
-    ]);
-    results.push(essence.rows[0]);
+      lines.essenceLine.unit
+    ])
+    results.push(essence.rows[0])
 
     // regular component lines
     for (const component of lines.componentLines) {
@@ -53,35 +53,35 @@ export class FormulaModel {
         component.component_id,
         null,
         component.quantityInBase,
-        component.unit,
-      ];
+        component.unit
+      ]
 
-      const result = await client.query(query, values);
+      const result = await client.query(query, values)
 
-      results.push(result.rows[0]);
+      results.push(result.rows[0])
     }
 
-    return results;
+    return results
   }
-  static async deleteFormula({ brandId, data }) {
+
+  static async deleteFormula ({ brandId, data }) {
     const query = `
         UPDATE formulas
         SET state = false
         WHERE id = $1
           AND brand_id = $2
         RETURNING *;
-      `;
+      `
 
-    const values = [data.id_formula, brandId];
+    const values = [data.id_formula, brandId]
 
-    const result = await pool.query(query, values);
-    console.log(result);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async listStock({ brand_id, page = 1, limit = 10, name, quantity }) {
-    const offset = (page - 1) * limit;
+  static async listStock ({ brand_id, page = 1, limit = 10, name, quantity }) {
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT
@@ -108,34 +108,34 @@ export class FormulaModel {
           AND fc.component_id IS NOT NULL
           AND c.state = FALSE
       )
-  `;
+  `
 
-    const values = [brand_id];
-    let index = 2;
+    const values = [brand_id]
+    let index = 2
 
     // Filter by formula name
     if (name) {
-      query += ` AND f.name ILIKE $${index}`;
-      values.push(`%${name}%`);
-      index++;
+      query += ` AND f.name ILIKE $${index}`
+      values.push(`%${name}%`)
+      index++
     }
 
     // Filter by final quantity
     if (quantity) {
-      query += ` AND f.final_quantity = $${index}`;
-      values.push(quantity);
-      index++;
+      query += ` AND f.final_quantity = $${index}`
+      values.push(quantity)
+      index++
     }
 
     query += `
     ORDER BY f.id DESC
     LIMIT $${index}
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     // ---------------- COUNT ----------------
 
@@ -158,52 +158,52 @@ export class FormulaModel {
           AND fc.component_id IS NOT NULL
           AND c.state = FALSE
       )
-  `;
+  `
 
-    const countValues = [brand_id];
-    index = 2;
+    const countValues = [brand_id]
+    index = 2
 
     if (name) {
-      countQuery += ` AND f.name ILIKE $${index}`;
-      countValues.push(`%${name}%`);
-      index++;
+      countQuery += ` AND f.name ILIKE $${index}`
+      countValues.push(`%${name}%`)
+      index++
     }
 
     if (quantity) {
-      countQuery += ` AND f.final_quantity = $${index}`;
-      countValues.push(quantity);
-      index++;
+      countQuery += ` AND f.final_quantity = $${index}`
+      countValues.push(quantity)
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
       total: Number(countResult.rows[0].total),
       page,
       limit,
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 
-  static async retrieveModel({ id, brandId }) {
-    const query = "SELECT * FROM formulas WHERE  id = $1 AND brand_id = $2";
+  static async retrieveModel ({ id, brandId }) {
+    const query = 'SELECT * FROM formulas WHERE  id = $1 AND brand_id = $2'
 
-    const values = [id, brandId];
+    const values = [id, brandId]
 
-    const result = await pool.query(query, values);
-    return result.rows[0];
+    const result = await pool.query(query, values)
+    return result.rows[0]
   }
 
-  static async listFormulaLocation({
+  static async listFormulaLocation ({
     brand_id,
     location_id,
     page = 1,
     limit = 10,
     name,
-    quantity,
+    quantity
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT f.*
@@ -233,34 +233,34 @@ export class FormulaModel {
       )
 
     )
-  `;
+  `
 
-    const values = [brand_id, location_id];
-    let index = 3;
+    const values = [brand_id, location_id]
+    let index = 3
 
     // Filter by name
     if (name) {
-      query += ` AND f.name ILIKE $${index}`;
-      values.push(`%${name}%`);
-      index++;
+      query += ` AND f.name ILIKE $${index}`
+      values.push(`%${name}%`)
+      index++
     }
 
     // Filter by final quantity
     if (quantity) {
-      query += ` AND f.final_quantity = $${index}`;
-      values.push(quantity);
-      index++;
+      query += ` AND f.final_quantity = $${index}`
+      values.push(quantity)
+      index++
     }
 
     query += `
     ORDER BY f.id DESC
     LIMIT $${index}
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     // ---------- COUNT QUERY ----------
 
@@ -294,31 +294,31 @@ export class FormulaModel {
       )
 
     )
-  `;
+  `
 
-    const countValues = [brand_id, location_id];
-    index = 3;
+    const countValues = [brand_id, location_id]
+    index = 3
 
     if (name) {
-      countQuery += ` AND f.name ILIKE $${index}`;
-      countValues.push(`%${name}%`);
-      index++;
+      countQuery += ` AND f.name ILIKE $${index}`
+      countValues.push(`%${name}%`)
+      index++
     }
 
     if (quantity) {
-      countQuery += ` AND f.final_quantity = $${index}`;
-      countValues.push(quantity);
-      index++;
+      countQuery += ` AND f.final_quantity = $${index}`
+      countValues.push(quantity)
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
       total: Number(countResult.rows[0].total),
       page,
       limit,
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

@@ -1,69 +1,78 @@
-import { Router } from "express";
-import { authMiddleware } from "../../middleware/authMiddleware.js";
+import { Router } from 'express'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
 import {
   validateBrandAccess,
-  validateComponentAccess,
   validateContainerAccess,
-  validateLocationAccess,
-} from "../../middleware/accessMiddleware.js";
-import { StockController } from "../../controllers/stock/stockController.js";
-import { StockContainerController } from "../../controllers/containers/stockContainerController.js";
+  validateLocationAccess
+} from '../../middleware/accessMiddleware.js'
+import { requireRole } from '../../middleware/roleMiddleware.js'
+import { StockContainerController } from '../../controllers/containers/stockContainerController.js'
 
-export const stockContainerRouter = Router();
+export const stockContainerRouter = Router()
+
+const owner = requireRole('owner', 'admin')
 
 stockContainerRouter.post(
-  "/create",
+  '/create',
   authMiddleware,
+  owner,
   validateLocationAccess,
   validateContainerAccess,
-  StockContainerController.createStockContainer,
-);
+  StockContainerController.createStockContainer
+)
 
 stockContainerRouter.delete(
-  "/delete",
+  '/delete',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockContainerController.deleteStockContainer,
-);
+  StockContainerController.deleteStockContainer
+)
 
 stockContainerRouter.post(
-  "/update",
+  '/update',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockContainerController.updateStockContainer,
-);
+  validateContainerAccess,
+  StockContainerController.updateStockContainer
+)
 
 stockContainerRouter.post(
-  "/register-loss",
+  '/register-loss',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockContainerController.registerLossContainer,
-);
+  validateContainerAccess,
+  StockContainerController.registerLossContainer
+)
 
 stockContainerRouter.post(
-  "/register-adjustment",
+  '/register-adjustment',
   authMiddleware,
+  owner,
   validateLocationAccess,
-  StockContainerController.registerAdjustmentContainer,
-);
+  validateContainerAccess,
+  StockContainerController.registerAdjustmentContainer
+)
 
 stockContainerRouter.get(
-  "/list",
+  '/list',
   authMiddleware,
   validateBrandAccess,
   validateLocationAccess,
-  StockContainerController.listStock,
-);
+  StockContainerController.listStock
+)
 stockContainerRouter.get(
-  "/retrieve",
+  '/retrieve',
   authMiddleware,
   validateLocationAccess,
-  StockContainerController.retrieveStockContainer,
-);
+  StockContainerController.retrieveStockContainer
+)
 
 stockContainerRouter.get(
-  "/movements/list",
+  '/movements/list',
   authMiddleware,
   validateBrandAccess,
-  StockContainerController.listMovements,
-);
+  StockContainerController.listMovements
+)

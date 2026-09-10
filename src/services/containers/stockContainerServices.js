@@ -1,10 +1,11 @@
-import { pool } from "../../config/db.js";
-import { StockContainerModel } from "../../models/containers/stockContainerModel.js";
-import { StockContainerMovementModel } from "../../models/containers/stockContainerMovement.js";
-import { StockModel } from "../../models/stock/StockModel.js";
-import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
+import { pool } from '../../config/db.js'
+import { StockContainerModel } from '../../models/containers/stockContainerModel.js'
+import { StockContainerMovementModel } from '../../models/containers/stockContainerMovement.js'
+import { StockModel } from '../../models/stock/StockModel.js'
+import { StockMovementModel } from '../../models/stock/stockMovementModel.js'
+import { AppError } from '../../helpers/AppError.js'
 
-//CREATE INITIAL MOVEMENT
+// CREATE INITIAL MOVEMENT
 // | movement_type |
 // | ------------- |
 // | INITIAL_STOCK |
@@ -15,21 +16,20 @@ import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
 // | LOSS          |d
 // | RETURN        |
 
-//services for stock , creation , adjustment , loss stock ...
+// services for stock , creation , adjustment , loss stock ...
 export class StockContainerService {
-  static async createStockContainer({ userId, params, unitsPrice }) {
-    const client = await pool.connect();
+  static async createStockContainer ({ userId, params, unitsPrice }) {
+    const client = await pool.connect()
 
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
       // 1. CREATE STOCK
-      console.log("entre 1");
       const stock = await StockContainerModel.createStockContainer(client, {
         userId,
         params,
-        unitsPrice,
-      });
+        unitsPrice
+      })
 
       // 2. CREATE INITIAL MOVEMENT
       // | movement_type |
@@ -40,13 +40,12 @@ export class StockContainerService {
       // | ADJUSTMENT    |
       // | LOSS          |
       // | RETURN        |
-      console.log(stock, "stock-----");
       await StockContainerMovementModel.createMovement(client, {
         stock_id: stock.id,
         container_id: params.container_id,
         location_id: stock.location_id,
 
-        movement_type: "INITIAL_STOCK",
+        movement_type: 'INITIAL_STOCK',
 
         quantity: stock.quantity,
 
@@ -54,34 +53,33 @@ export class StockContainerService {
 
         total_price: stock.quantity * stock.avg_price,
 
-        created_by: userId,
-      });
+        created_by: userId
+      })
 
-      await client.query("COMMIT");
+      await client.query('COMMIT')
 
-      return stock;
+      return stock
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 
-  static async updateStockContainer({
+  static async updateStockContainer ({
     stockId,
     userId,
     location_id,
     container_id,
     unitsPrice,
-    AVGPrice,
+    AVGPrice
   }) {
-    console.log("user", userId);
-    const client = await pool.connect();
+    const client = await pool.connect()
 
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
       // 1. CREATE STOCK
       const stock = await StockContainerModel.updateStockContainer(client, {
@@ -90,15 +88,15 @@ export class StockContainerService {
         location_id,
         container_id,
         AVGPrice,
-        userId,
-      });
+        userId
+      })
 
       await StockContainerMovementModel.createMovement(client, {
         stock_id: stock.id,
         container_id,
         location_id: stock.location_id,
 
-        movement_type: "PURCHASE",
+        movement_type: 'PURCHASE',
 
         quantity: unitsPrice.quantityInBase,
 
@@ -106,26 +104,25 @@ export class StockContainerService {
 
         total_price: unitsPrice.quantityInBase * unitsPrice.purchaseUnitPrice,
 
-        created_by: userId,
-      });
+        created_by: userId
+      })
 
-      await client.query("COMMIT");
+      await client.query('COMMIT')
 
-      return stock;
+      return stock
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 
-  static async registerLossContainer({ stock, smallSizeLoss, userId, data }) {
-    const client = await pool.connect();
+  static async registerLossContainer ({ stock, smallSizeLoss, userId, data }) {
+    const client = await pool.connect()
     try {
-      console.log("entre", data);
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
       // 1. CREATE STOCK
       const result = await StockContainerModel.registerLossContainer(client, {
@@ -133,10 +130,10 @@ export class StockContainerService {
         userId,
         stockId: stock.id,
         container_id: stock.container_id,
-        location_id: stock.location_id,
-      });
+        location_id: stock.location_id
+      })
       if (!result) {
-        throw new Error("Error updating stock");
+        throw new AppError('Error updating stock')
       }
       await StockContainerMovementModel.createMovement(client, {
         stock_id: stock.id,
@@ -145,7 +142,7 @@ export class StockContainerService {
 
         location_id: stock.location_id,
 
-        movement_type: "LOSS",
+        movement_type: 'LOSS',
 
         quantity: Number(result.quantity_base) - Number(stock.quantity_base),
 
@@ -155,30 +152,29 @@ export class StockContainerService {
 
         reason: data.reason,
 
-        created_by: userId,
-      });
-      await client.query("COMMIT");
+        created_by: userId
+      })
+      await client.query('COMMIT')
 
-      return result;
+      return result
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 
-  static async registerAdjustContainer({
+  static async registerAdjustContainer ({
     stock,
     smallSizeAdjust,
     userId,
-    data,
+    data
   }) {
-    const client = await pool.connect();
+    const client = await pool.connect()
     try {
-      console.log("entre", data);
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
       // 1. CREATE STOCK
       const result = await StockContainerModel.registerLossContainer(client, {
@@ -186,10 +182,10 @@ export class StockContainerService {
         userId,
         stockId: stock.id,
         container_id: stock.container_id,
-        location_id: stock.location_id,
-      });
+        location_id: stock.location_id
+      })
       if (!result) {
-        throw new Error("Error updating stock");
+        throw new AppError('Error updating stock')
       }
       await StockContainerMovementModel.createMovement(client, {
         stock_id: stock.id,
@@ -198,7 +194,7 @@ export class StockContainerService {
 
         location_id: stock.location_id,
 
-        movement_type: "ADJUSTMENT",
+        movement_type: 'ADJUSTMENT',
 
         quantity: Number(result.quantity_base) - Number(stock.quantity_base),
 
@@ -208,17 +204,17 @@ export class StockContainerService {
 
         reason: data.reason,
 
-        created_by: userId,
-      });
-      await client.query("COMMIT");
+        created_by: userId
+      })
+      await client.query('COMMIT')
 
-      return result;
+      return result
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 }

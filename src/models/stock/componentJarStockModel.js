@@ -1,18 +1,19 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
+import { AppError } from '../../helpers/AppError.js'
 
 export class ComponentJarStockModel {
-  //retrieve for Sale / transfer
-  static async retrieveByComponent({ component_id, location_id }) {
+  // retrieve for Sale / transfer
+  static async retrieveByComponent ({ component_id, location_id }) {
     const query =
-      "SELECT * FROM component_jar_stock WHERE component_id = $1 AND location_id = $2 AND state = true";
-    const values = [component_id, location_id];
+      'SELECT * FROM component_jar_stock WHERE component_id = $1 AND location_id = $2 AND state = true'
+    const values = [component_id, location_id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async discountStock(client, { component_id, location_id, quantity }) {
+  static async discountStock (client, { component_id, location_id, quantity }) {
     const stockQuery = `
     SELECT *
     FROM component_jar_stock
@@ -20,25 +21,25 @@ export class ComponentJarStockModel {
       AND location_id = $2
       AND state = true
     FOR UPDATE
-  `;
+  `
 
     const stockResult = await client.query(stockQuery, [
       component_id,
-      location_id,
-    ]);
+      location_id
+    ])
 
-    const stock = stockResult.rows[0];
+    const stock = stockResult.rows[0]
 
     if (!stock) {
-      throw new Error(`Jar stock not found for component ${component_id}`);
+      throw new AppError(`Jar stock not found for component ${component_id}`)
     }
 
-    const currentQuantity = Number(stock.quantity_base);
+    const currentQuantity = Number(stock.quantity_base)
 
-    const quantityToDiscount = Number(quantity);
+    const quantityToDiscount = Number(quantity)
 
     if (quantityToDiscount > currentQuantity) {
-      throw new Error(`Insufficient jar stock for component ${component_id}`);
+      throw new AppError(`Insufficient jar stock for component ${component_id}`)
     }
 
     const query = `
@@ -49,21 +50,21 @@ export class ComponentJarStockModel {
       AND location_id = $3
       AND state = true
     RETURNING *
-  `;
+  `
 
     const result = await client.query(query, [
       quantityToDiscount,
       component_id,
-      location_id,
-    ]);
+      location_id
+    ])
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
   // Upsert: creates the jar row on the first transfer, otherwise adds to it.
-  static async increaseStock(
+  static async increaseStock (
     client,
-    { component_id, location_id, quantity, userId },
+    { component_id, location_id, quantity, userId }
   ) {
     const query = `
     INSERT INTO component_jar_stock (component_id, location_id, quantity_base, created_by, updated_by)
@@ -74,23 +75,23 @@ export class ComponentJarStockModel {
       updated_by = $4,
       updated_at = NOW()
     RETURNING *
-  `;
+  `
 
-    const values = [component_id, location_id, quantity, userId];
+    const values = [component_id, location_id, quantity, userId]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async listJarStock({
+  static async listJarStock ({
     brand_id,
     page = 1,
     limit = 10,
     name,
-    location,
+    location
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT
@@ -111,26 +112,26 @@ export class ComponentJarStockModel {
     WHERE c.brand_id = $1
       AND js.state = true
       AND c.state = true
-  `;
+  `
 
-    const values = [brand_id];
+    const values = [brand_id]
 
-    let index = 2;
+    let index = 2
 
     if (name) {
-      query += ` AND c.name ILIKE $${index}`;
+      query += ` AND c.name ILIKE $${index}`
 
-      values.push(`%${name}%`);
+      values.push(`%${name}%`)
 
-      index++;
+      index++
     }
 
     if (location) {
-      query += ` AND js.location_id = $${index}`;
+      query += ` AND js.location_id = $${index}`
 
-      values.push(location);
+      values.push(location)
 
-      index++;
+      index++
     }
 
     query += `
@@ -139,11 +140,11 @@ export class ComponentJarStockModel {
     LIMIT $${index}
 
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     let countQuery = `
     SELECT COUNT(*) AS total
@@ -159,29 +160,29 @@ export class ComponentJarStockModel {
     WHERE c.brand_id = $1
       AND js.state = true
       AND c.state = true
-  `;
+  `
 
-    const countValues = [brand_id];
+    const countValues = [brand_id]
 
-    index = 2;
+    index = 2
 
     if (name) {
-      countQuery += ` AND c.name ILIKE $${index}`;
+      countQuery += ` AND c.name ILIKE $${index}`
 
-      countValues.push(`%${name}%`);
+      countValues.push(`%${name}%`)
 
-      index++;
+      index++
     }
 
     if (location) {
-      countQuery += ` AND js.location_id = $${index}`;
+      countQuery += ` AND js.location_id = $${index}`
 
-      countValues.push(location);
+      countValues.push(location)
 
-      index++;
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
@@ -192,7 +193,7 @@ export class ComponentJarStockModel {
 
       limit,
 
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

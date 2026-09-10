@@ -1,340 +1,268 @@
-import { validateSchema } from "../../helpers/validateSchema.js";
-import { StockModel } from "../../models/stock/StockModel.js";
-import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
-import { BussinesLogicStock } from "../../services/stock/bussinesLogicStock.js";
-import { StockService } from "../../services/stock/stockServices.js";
+import { validateSchema } from '../../helpers/validateSchema.js'
+import { StockModel } from '../../models/stock/StockModel.js'
+import { StockMovementModel } from '../../models/stock/stockMovementModel.js'
+import { BussinesLogicStock } from '../../services/stock/bussinesLogicStock.js'
+import { StockService } from '../../services/stock/stockServices.js'
+import { handleError } from '../../helpers/handleError.js'
 import {
   createStockSchema,
   deleteStockSchema,
   retrieveStockSchema,
   registerLossStockSchema,
+  registerAdjustmentStockSchema,
   updateStockSchema,
   ListStockSchema,
-  ListStockMovementSchema,
-} from "../../shemas/stock/stockSchemas.js";
+  ListStockMovementSchema
+} from '../../shemas/stock/stockSchemas.js'
 
 export class StockController {
-  static async createStock(req, res) {
+  static async createStock (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { data, error } = validateSchema(createStockSchema, req.body);
-      console.log("Validated");
+      const { id: userId } = req.user
+      const { data, error } = validateSchema(createStockSchema, req.body)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
-      //Logic for Unit value
+      // Logic for Unit value
       const unitsPrice = await BussinesLogicStock.convertMeasuresStock({
         purchase_price: data.total_purchase_price,
         quantity_base: data.quantity_base,
         unit: data.unit,
         userId,
         wholesale_price: data.wholesale_price,
-        consumer_price: data.consumer_price,
-      });
-      console.log(unitsPrice);
+        consumer_price: data.consumer_price
+      })
 
       const result = await StockService.createStock({
         userId,
         params: data,
-        unitsPrice,
-      });
+        unitsPrice
+      })
 
       if (!result) {
-        return res.status(404).json({ error: "Error with creation" });
+        return res.status(404).json({ error: 'Error with creation' })
       }
       return res.status(201).json({
-        message: "CREATE SUCCESSFULLY",
-        result,
-      });
+        message: 'CREATE SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.error(error);
-
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
 
-  static async deleteStock(req, res) {
+  static async deleteStock (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { data, error } = validateSchema(deleteStockSchema, req.query);
-      console.log(data);
+      const { id: userId } = req.user
+      const { data, error } = validateSchema(deleteStockSchema, req.query)
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
-      const result = await StockModel.deleteStock({ userId, data });
+      const result = await StockModel.deleteStock({
+        userId,
+        data: { ...data, id: req.location.id }
+      })
       if (!result) {
-        return res.status(404).json({ error: "Stock not found" });
+        return res.status(404).json({ error: 'Stock not found' })
       }
       return res.status(200).json({
-        message: "DELETE SUCCESSFULLY",
-        result,
-      });
+        message: 'DELETE SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.error(error);
-
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
-  static async updateStock(req, res) {
+
+  static async updateStock (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { data, error } = validateSchema(updateStockSchema, req.body);
-      console.log(data, "data updatestock");
+      const { id: userId } = req.user
+      const { data, error } = validateSchema(updateStockSchema, req.body)
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
-      //Logic for Unit value
+      // Unit conversion is pure; the weighted-average price is computed inside
+      // the service transaction from a row-locked read (no lost updates).
       const unitsPrice = await BussinesLogicStock.convertMeasuresStock({
         purchase_price: data.total_purchase_price,
         quantity_base: data.quantity_base,
         unit: data.unit,
         userId,
         wholesale_price: data.wholesale_price,
-        consumer_price: data.consumer_price,
-      });
+        consumer_price: data.consumer_price
+      })
 
-      console.log(unitsPrice);
-
-      const stock = await StockModel.RetrieveStock({
-        stockId: data.stock_id,
-        location_id: data.location_id,
-        component_id: data.component_id,
-      });
-
-      console.log(stock, "stoccccckk");
-      const AVGPrice = await BussinesLogicStock.calculeteAVGPrice({
-        stock,
-        data: unitsPrice,
-      });
-
-      if (!AVGPrice) {
-        return res.status(400).json({ error: "Error in AVG Price" });
-      }
-      console.log("component", data.component_id, AVGPrice);
       const result = await StockService.updateStock({
         stockId: data.stock_id,
         userId,
         location_id: data.location_id,
         component_id: data.component_id,
-        unitsPrice,
-        AVGPrice,
-      });
+        unitsPrice
+      })
 
       if (!result) {
-        return res.status(404).json({ error: "Error with update" });
+        return res.status(404).json({ error: 'Error with update' })
       }
       return res.status(200).json({
-        message: "UPDATE SUCCESSFULLY",
-        result,
-      });
+        message: 'UPDATE SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.error(error);
-
-      return res.status(500).json({
-        error: error.message || "Internal server error",
-      });
+      return handleError(res, error)
     }
   }
 
-  static async registerLoss(req, res) {
+  static async registerLoss (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { data, error } = validateSchema(registerLossStockSchema, req.body);
+      const { id: userId } = req.user
+      const { data, error } = validateSchema(registerLossStockSchema, req.body)
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
-      //Logic for Unit value
+      // Logic for Unit value
       const unitsPrice = await BussinesLogicStock.convertMeasuresStock({
         purchase_price: data.total_purchase_price,
         quantity_base: data.quantity_base,
         unit: data.unit,
         userId,
         wholesale_price: data.wholesale_price,
-        consumer_price: data.consumer_price,
-      });
+        consumer_price: data.consumer_price
+      })
 
-      console.log(unitsPrice);
-
-      const stock = await StockModel.RetrieveStock({
-        stockId: data.stock_id,
-        location_id: data.location_id,
-        component_id: data.component_id,
-      });
-
-      if (!stock) {
-        return res.status(404).json({ error: "Not found" });
-      }
-
-      const smallSizeLoss = await BussinesLogicStock.registerLoss({
-        stock,
-        unitsPrice,
-      });
-
-      if (!smallSizeLoss) {
-        return res.status(404).json({ error: "Error with result" });
-      }
       const result = await StockService.registerLoss({
-        stock,
-        smallSizeLoss,
+        stockId: data.stock_id,
+        location_id: data.location_id,
+        component_id: data.component_id,
         userId,
-        data,
-      });
+        unitsPrice,
+        data
+      })
       if (!result) {
-        return res.status(404).json({ error: "Error with Update" });
+        return res.status(404).json({ error: 'Error with Update' })
       }
 
       return res.status(200).json({
-        message: "REGISTER LOSS SUCCESSFULLY",
-        result,
-      });
+        message: 'REGISTER LOSS SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.error(error);
-
-      return res.status(500).json({
-        error: error.message || "Internal server error",
-      });
+      return handleError(res, error)
     }
   }
 
-  static async registerAdjustment(req, res) {
+  static async registerAdjustment (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { data, error } = validateSchema(registerLossStockSchema, req.body);
+      const { id: userId } = req.user
+      const { data, error } = validateSchema(registerAdjustmentStockSchema, req.body)
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
-      //Logic for Unit value
+      // Logic for Unit value
       const unitsPrice = await BussinesLogicStock.convertMeasuresStock({
         purchase_price: data.total_purchase_price,
         quantity_base: data.quantity_base,
         unit: data.unit,
         userId,
         wholesale_price: data.wholesale_price,
-        consumer_price: data.consumer_price,
-      });
+        consumer_price: data.consumer_price
+      })
 
-      console.log(unitsPrice);
-
-      const stock = await StockModel.RetrieveStock({
+      const result = await StockService.registerAdjust({
         stockId: data.stock_id,
         location_id: data.location_id,
         component_id: data.component_id,
-      });
-
-      if (!stock) {
-        return res.status(404).json({ error: "Not found" });
-      }
-
-      const smallSizeAdjust = await BussinesLogicStock.registerAdjustment({
-        stock,
-        unitsPrice,
-      });
-
-      if (!smallSizeAdjust) {
-        return res.status(404).json({ error: "Error with result" });
-      }
-      const result = await StockService.registerAdjust({
-        stock,
-        smallSizeAdjust,
         userId,
-        data,
-      });
+        unitsPrice,
+        data
+      })
       if (!result) {
-        return res.status(404).json({ error: "Error with Update" });
+        return res.status(404).json({ error: 'Error with Update' })
       }
 
       return res.status(200).json({
-        message: "REGISTER ADJUST SUCCESSFULLY",
-        result,
-      });
+        message: 'REGISTER ADJUST SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.error(error);
-
-      return res.status(500).json({
-        error: "Internal server error",
-      });
+      return handleError(res, error)
     }
   }
 
-  static async retrieveStock(req, res) {
+  static async retrieveStock (req, res) {
     try {
-      const { data, error } = validateSchema(retrieveStockSchema, req.query);
+      const { data, error } = validateSchema(retrieveStockSchema, req.query)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
       const result = await StockModel.retrieveStock({
         stock_id: data.id_stock,
-        location_id: data.id,
-      });
+        location_id: req.location.id
+      })
       if (!result) {
-        return res.status(404).json({ error: "Error not found" });
+        return res.status(404).json({ error: 'Error not found' })
       }
 
       return res.status(200).json({
-        message: "RETRIEVE SUCCESSFULLY",
-        result,
-      });
+        message: 'RETRIEVE SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.error(error);
-
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
-  static async listStock(req, res) {
+
+  static async listStock (req, res) {
     try {
-      const { id: brandId } = req.brand;
-      const { data, error } = validateSchema(ListStockSchema, req.query);
+      const { id: brandId } = req.brand
+      const { data, error } = validateSchema(ListStockSchema, req.query)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
-      console.log("entramos");
       const result = await StockModel.listStock({
         brand_id: brandId,
         page: data.page,
         limit: data.limit,
         name: data.name,
         location: data.id,
-        type_component: data.type_component,
-      });
-      console.log(result, "result");
+        type_component: data.type_component
+      })
       if (!result) {
-        return res.status(404).json({ error: "not fount Stock" });
+        return res.status(404).json({ error: 'not fount Stock' })
       }
       return res.status(200).json({
-        message: "LIST SUCCESSFULLY",
-        result,
-      });
+        message: 'LIST SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.log(error);
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
 
-  static async listMovements(req, res) {
+  static async listMovements (req, res) {
     try {
-      const { id: brandId } = req.brand;
-      const { data, error } = validateSchema(ListStockMovementSchema, req.query);
+      const { id: brandId } = req.brand
+      const { data, error } = validateSchema(ListStockMovementSchema, req.query)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
       const result = await StockMovementModel.listMovements({
@@ -343,21 +271,20 @@ export class StockController {
         limit: data.limit,
         location: data.id,
         movement_type: data.movement_type,
-        component_id: data.component_id,
-      });
+        component_id: data.component_id
+      })
 
       if (!result) {
-        return res.status(404).json({ error: "not fount Movements" });
+        return res.status(404).json({ error: 'not fount Movements' })
       }
       return res.status(200).json({
-        message: "LIST SUCCESSFULLY",
-        result,
-      });
+        message: 'LIST SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.log(error);
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
 }

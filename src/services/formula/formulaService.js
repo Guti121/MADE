@@ -1,37 +1,38 @@
-import { pool } from "../../config/db.js";
-import { FormulaModel } from "../../models/formula/formulaModel.js";
+import { pool } from '../../config/db.js'
+import { FormulaModel } from '../../models/formula/formulaModel.js'
+import { AppError } from '../../helpers/AppError.js'
 
 export class FormulaService {
-  static async createFormula({ userId, brandId, data, lines }) {
-    const client = await pool.connect();
+  static async createFormula ({ userId, brandId, data, lines }) {
+    const client = await pool.connect()
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
       const formula = await FormulaModel.createFormula(client, {
         userId,
         brandId,
         data,
-        lines,
-      });
+        lines
+      })
 
       if (!formula) {
-        throw new Error("Formula has error");
+        throw new AppError('Formula has error')
       }
 
       const components = await FormulaModel.createFormulaComponent(client, {
         formulaId: formula.id,
-        lines,
-      });
+        lines
+      })
 
-      await client.query("COMMIT");
+      await client.query('COMMIT')
 
-      return { formula, components };
+      return { formula, components }
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 }

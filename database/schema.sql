@@ -40,11 +40,15 @@ CREATE TABLE brands (
 CREATE TABLE user_sessions (
   id INTEGER NOT NULL DEFAULT nextval('user_sessions_id_seq'::regclass),
   user_id INTEGER NOT NULL,
-  refresh_token TEXT,
-  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  token_hash TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  CONSTRAINT user_sessions_token_hash_key UNIQUE (token_hash),
   CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE NO ACTION
 );
+CREATE INDEX idx_user_sessions_user_id ON user_sessions (user_id);
+CREATE INDEX idx_user_sessions_expires_at ON user_sessions (expires_at);
 
 -- ============================================
 -- Table: formulas

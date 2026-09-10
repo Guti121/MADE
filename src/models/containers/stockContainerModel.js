@@ -1,10 +1,10 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
+import { AppError } from '../../helpers/AppError.js'
 
 export class StockContainerModel {
-  static async createStockContainer(client, { userId, params, unitsPrice }) {
+  static async createStockContainer (client, { userId, params, unitsPrice }) {
     const query = `INSERT INTO containers_stock (container_id,Location_id,Quantity,Avg_price,Wholesale_price,Consumer_price,created_by,updated_by)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`;
-    console.log(params, "params 1");
+        VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`
     const values = [
       params.container_id,
       params.location_id,
@@ -12,26 +12,24 @@ export class StockContainerModel {
       unitsPrice.purchaseUnitPrice,
       unitsPrice.wholesaleUnitPrice,
       unitsPrice.consumerUnitPrice,
-      userId,
-    ];
+      userId
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async deleteStockContainer({ data }) {
-    const query = `DELETE FROM containers_stock WHERE id = $1 AND location_id = $2 RETURNING *`;
-    const values = [data.id_stock, data.id];
+  static async deleteStockContainer ({ data }) {
+    const query = 'DELETE FROM containers_stock WHERE id = $1 AND location_id = $2 RETURNING *'
+    const values = [data.id_stock, data.id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async retrieveStockContainer({ stockId, location_id, container_id }) {
-    console.log(stockId, location_id);
-
+  static async retrieveStockContainer ({ stockId, location_id, container_id }) {
     const query = `
       SELECT
           cs.*,
@@ -57,27 +55,17 @@ export class StockContainerModel {
         AND cs.location_id = $2
         AND cs.container_id = $3
         AND c.state = true;
-      `;
-    const values = [stockId, location_id, container_id];
+      `
+    const values = [stockId, location_id, container_id]
 
-    const result = await pool.query(query, values);
-    return result.rows[0];
+    const result = await pool.query(query, values)
+    return result.rows[0]
   }
 
-  static async updateStockContainer(
+  static async updateStockContainer (
     client,
-    { stockId, unitsPrice, location_id, container_id, AVGPrice, userId },
+    { stockId, unitsPrice, location_id, container_id, AVGPrice, userId }
   ) {
-    console.log(
-      "ssssssssssssssss",
-      unitsPrice.quantityInBase,
-      AVGPrice,
-      unitsPrice.wholesaleUnitPrice,
-      unitsPrice.consumerUnitPrice,
-      location_id,
-      userId,
-      container_id,
-    );
     const query = `
     UPDATE containers_stock
         SET 
@@ -89,7 +77,7 @@ export class StockContainerModel {
           updated_at= NOW()
         WHERE Location_id = $6 AND id =$7 AND container_id =$8
 
-        RETURNING*`;
+        RETURNING*`
 
     const values = [
       AVGPrice.newQuantity,
@@ -99,16 +87,17 @@ export class StockContainerModel {
       userId,
       location_id,
       stockId,
-      container_id,
-    ];
+      container_id
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
-  static async registerLossContainer(
+
+  static async registerLossContainer (
     client,
-    { quantity, userId, stockId, container_id, location_id },
+    { quantity, userId, stockId, container_id, location_id }
   ) {
     const query = `
     UPDATE containers_stock
@@ -120,64 +109,57 @@ export class StockContainerModel {
     WHERE id = $3 AND container_id =$4 AND Location_id = $5
 
     RETURNING *
-  `;
-    console.log(
-      "cuantity perdida",
-      quantity,
-      userId,
-      stockId,
-      container_id,
-      location_id,
-      "as",
-    );
-    const values = [quantity, userId, stockId, container_id, location_id];
+  `
+    const values = [quantity, userId, stockId, container_id, location_id]
 
-    const result = await client.query(query, values);
-    return result.rows[0];
+    const result = await client.query(query, values)
+    return result.rows[0]
   }
-  static async retrieveByContainer({ container_id, location_id }) {
+
+  static async retrieveByContainer ({ container_id, location_id }) {
     const query = `
     SELECT cs.*, c.name AS container_name
     FROM containers_stock cs
     JOIN containers c ON c.id = cs.container_id
     WHERE cs.container_id = $1
       AND cs.location_id = $2
-  `;
+  `
 
-    const values = [container_id, location_id];
+    const values = [container_id, location_id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
-  static async discountStock(client, { container_id, location_id, quantity }) {
+
+  static async discountStock (client, { container_id, location_id, quantity }) {
     const stockQuery = `
     SELECT *
     FROM containers_stock
     WHERE container_id = $1
       AND location_id = $2
     FOR UPDATE
-  `;
+  `
 
     const stockResult = await client.query(stockQuery, [
       container_id,
-      location_id,
-    ]);
+      location_id
+    ])
 
-    const stock = stockResult.rows[0];
+    const stock = stockResult.rows[0]
 
     if (!stock) {
-      throw new Error(
-        `Container stock not found for container ${container_id}`,
-      );
+      throw new AppError(
+        `Container stock not found for container ${container_id}`
+      )
     }
 
-    const currentQuantity = Number(stock.quantity);
+    const currentQuantity = Number(stock.quantity)
 
-    const quantityToDiscount = Number(quantity);
+    const quantityToDiscount = Number(quantity)
 
     if (quantityToDiscount > currentQuantity) {
-      throw new Error(`Insufficient stock for container ${container_id}`);
+      throw new AppError(`Insufficient stock for container ${container_id}`)
     }
 
     const query = `
@@ -187,27 +169,26 @@ export class StockContainerModel {
     WHERE container_id = $2
       AND location_id = $3
     RETURNING *
-  `;
+  `
 
     const result = await client.query(query, [
       quantityToDiscount,
       container_id,
-      location_id,
-    ]);
+      location_id
+    ])
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async listStockContainer({
+  static async listStockContainer ({
     brand_id,
     page = 1,
     limit = 10,
     name,
     location,
-    type_container,
+    type_container
   }) {
-    console.log(type_container, "tyoeeeeeeee");
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT
@@ -234,37 +215,37 @@ export class StockContainerModel {
 
     WHERE c.brand_id = $1
       AND c.state = true 
-  `;
+  `
 
-    const values = [brand_id];
+    const values = [brand_id]
 
-    let index = 2;
+    let index = 2
 
     // FILTER BY COMPONENT NAME
     if (name) {
-      query += ` AND c.name ILIKE $${index}`;
+      query += ` AND c.name ILIKE $${index}`
 
-      values.push(`%${name}%`);
+      values.push(`%${name}%`)
 
-      index++;
+      index++
     }
 
     // FILTER BY LOCATION
     if (location) {
-      query += ` AND s.location_id = $${index}`;
+      query += ` AND s.location_id = $${index}`
 
-      values.push(location);
+      values.push(location)
 
-      index++;
+      index++
     }
 
     // FILTER BY TYPE COMPONENT
     if (type_container) {
-      query += ` AND c.type_container_id = $${index}`;
+      query += ` AND c.type_container_id = $${index}`
 
-      values.push(type_container);
+      values.push(type_container)
 
-      index++;
+      index++
     }
 
     query += `
@@ -273,11 +254,11 @@ export class StockContainerModel {
     LIMIT $${index}
 
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     // COUNT QUERY
 
@@ -297,43 +278,43 @@ export class StockContainerModel {
 
     WHERE c.brand_id = $1
       AND c.state = true
-  `;
+  `
 
-    const countValues = [brand_id];
+    const countValues = [brand_id]
 
-    index = 2;
+    index = 2
 
     if (name) {
       countQuery += `
       AND c.name ILIKE $${index}
-    `;
+    `
 
-      countValues.push(`%${name}%`);
+      countValues.push(`%${name}%`)
 
-      index++;
+      index++
     }
 
     if (location) {
       countQuery += `
       AND s.location_id = $${index}
-    `;
+    `
 
-      countValues.push(location);
+      countValues.push(location)
 
-      index++;
+      index++
     }
 
     if (type_container) {
       countQuery += `
       AND c.type_container_id = $${index}
-    `;
+    `
 
-      countValues.push(type_container);
+      countValues.push(type_container)
 
-      index++;
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
@@ -344,7 +325,7 @@ export class StockContainerModel {
 
       limit,
 
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

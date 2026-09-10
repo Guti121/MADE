@@ -1,38 +1,38 @@
-import { Router } from "express";
-import { authMiddleware } from "../../middleware/authMiddleware.js";
+import { Router } from 'express'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
 import {
   validateBrandAccess,
-  validateLocationAccess,
-} from "../../middleware/accessMiddleware.js";
-import { SaleController } from "../../controllers/sales/salesController.js";
+  validateLocationAccess
+} from '../../middleware/accessMiddleware.js'
+import { SaleController } from '../../controllers/sales/salesController.js'
 
-export const saleRouter = Router();
+export const saleRouter = Router()
 
 saleRouter.post(
-  "/preview",
+  '/preview',
   authMiddleware,
   validateBrandAccess,
   validateLocationAccess,
-  SaleController.previewSale,
-);
+  SaleController.previewSale
+)
 
 saleRouter.post(
-  "/create-sale",
+  '/create-sale',
   authMiddleware,
   validateBrandAccess,
   validateLocationAccess,
-  SaleController.createSale,
-);
+  SaleController.createSale
+)
 
 saleRouter.get(
-  "/list-sale",
+  '/list-sale',
   authMiddleware,
   validateLocationAccess,
-  SaleController.listSales,
-);
+  SaleController.listSales
+)
 saleRouter.get(
-  "/retrieve-sale",
+  '/retrieve-sale',
   authMiddleware,
   validateLocationAccess,
-  SaleController.retrieveSale,
-);
+  SaleController.retrieveSale
+)

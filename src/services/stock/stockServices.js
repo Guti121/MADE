@@ -1,8 +1,10 @@
-import { pool } from "../../config/db.js";
-import { StockModel } from "../../models/stock/StockModel.js";
-import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
+import { pool } from '../../config/db.js'
+import { StockModel } from '../../models/stock/StockModel.js'
+import { StockMovementModel } from '../../models/stock/stockMovementModel.js'
+import { BussinesLogicStock } from './bussinesLogicStock.js'
+import { AppError } from '../../helpers/AppError.js'
 
-//CREATE INITIAL MOVEMENT
+// CREATE INITIAL MOVEMENT
 // | movement_type |
 // | ------------- |
 // | INITIAL_STOCK |
@@ -13,20 +15,20 @@ import { StockMovementModel } from "../../models/stock/stockMovementModel.js";
 // | LOSS          |d
 // | RETURN        |
 
-//services for stock , creation , adjustment , loss stock ...
+// services for stock , creation , adjustment , loss stock ...
 export class StockService {
-  static async createStock({ userId, params, unitsPrice }) {
-    const client = await pool.connect();
+  static async createStock ({ userId, params, unitsPrice }) {
+    const client = await pool.connect()
 
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
       // 1. CREATE STOCK
       const stock = await StockModel.createStock(client, {
         userId,
         params,
-        unitsPrice,
-      });
+        unitsPrice
+      })
 
       // 2. CREATE INITIAL MOVEMENT
       // | movement_type |
@@ -42,7 +44,7 @@ export class StockService {
         stock_id: stock.id,
         location_id: stock.location_id,
 
-        movement_type: "INITIAL_STOCK",
+        movement_type: 'INITIAL_STOCK',
 
         quantity: stock.quantity_base,
 
@@ -50,50 +52,64 @@ export class StockService {
 
         total_price: stock.quantity_base * stock.avg_price,
 
-        created_by: userId,
-      });
+        created_by: userId
+      })
 
-      await client.query("COMMIT");
+      await client.query('COMMIT')
 
-      return stock;
+      return stock
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 
-  static async updateStock({
+  static async updateStock ({
     stockId,
     userId,
     location_id,
     component_id,
-    unitsPrice,
-    AVGPrice,
+    unitsPrice
   }) {
-    console.log("user", userId);
-    const client = await pool.connect();
+    const client = await pool.connect()
 
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
-      // 1. CREATE STOCK
+      // Lock the row, then compute the weighted-average price from the LOCKED
+      // state — never from an unlocked read that a concurrent purchase can
+      // invalidate (lost update).
+      const current = await StockModel.lockStock(client, {
+        stockId,
+        location_id,
+        component_id
+      })
+      if (!current) {
+        throw new AppError('Stock not found')
+      }
+
+      const AVGPrice = await BussinesLogicStock.calculeteAVGPrice({
+        stock: current,
+        data: unitsPrice
+      })
+
       const stock = await StockModel.updateStock(client, {
         stockId,
         unitsPrice,
         location_id,
         component_id,
         AVGPrice,
-        userId,
-      });
+        userId
+      })
 
       await StockMovementModel.createMovement(client, {
         stock_id: stock.id,
 
-        movement_type: "PURCHASE",
-        location_id: location_id,
+        movement_type: 'PURCHASE',
+        location_id,
 
         quantity: unitsPrice.quantityInBase,
 
@@ -101,114 +117,123 @@ export class StockService {
 
         total_price: unitsPrice.quantityInBase * unitsPrice.purchaseUnitPrice,
 
-        created_by: userId,
-      });
+        created_by: userId
+      })
 
-      await client.query("COMMIT");
+      await client.query('COMMIT')
 
-      return stock;
+      return stock
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 
-  static async registerLoss({ stock, smallSizeLoss, userId, data }) {
-    const client = await pool.connect();
+  static async registerLoss ({ stockId, location_id, component_id, userId, unitsPrice, data }) {
+    const client = await pool.connect()
     try {
-      console.log("entre", data);
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
-      // 1. CREATE STOCK
+      const current = await StockModel.lockStock(client, {
+        stockId,
+        location_id,
+        component_id
+      })
+      if (!current) {
+        throw new AppError('Stock not found')
+      }
+
+      // Recompute the new balance from the LOCKED row (throws if insufficient).
+      const newQuantity = await BussinesLogicStock.registerLoss({
+        stock: current,
+        unitsPrice
+      })
+
       const result = await StockModel.registerLoss(client, {
-        quantity: smallSizeLoss,
+        quantity: newQuantity,
         userId,
-        stockId: stock.id,
-        component_id: stock.component_id,
-        location_id: stock.location_id,
-      });
+        stockId: current.id,
+        component_id: current.component_id,
+        location_id: current.location_id
+      })
       if (!result) {
-        throw new Error("Error updating stock");
+        throw new AppError('Error updating stock')
       }
       await StockMovementModel.createMovement(client, {
-        stock_id: stock.id,
-
-        component_id: stock.component_id,
-
-        location_id: stock.location_id,
-
-        movement_type: "LOSS",
-
-        quantity: Number(result.quantity_base) - Number(stock.quantity_base),
-
-        unit_price: stock.avg_price,
-
-        total_price: Number(stock.avg_price) * Number(result.quantity_base),
-
+        stock_id: current.id,
+        component_id: current.component_id,
+        location_id: current.location_id,
+        movement_type: 'LOSS',
+        quantity: Number(result.quantity_base) - Number(current.quantity_base),
+        unit_price: current.avg_price,
+        total_price: Number(current.avg_price) * Number(result.quantity_base),
         reason: data.reason,
+        created_by: userId
+      })
+      await client.query('COMMIT')
 
-        created_by: userId,
-      });
-      await client.query("COMMIT");
-
-      return result;
+      return result
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 
-  static async registerAdjust({ stock, smallSizeAdjust, userId, data }) {
-    const client = await pool.connect();
+  static async registerAdjust ({ stockId, location_id, component_id, userId, unitsPrice, data }) {
+    const client = await pool.connect()
     try {
-      console.log("entre", data);
-      await client.query("BEGIN");
+      await client.query('BEGIN')
 
-      // 1. CREATE STOCK
+      const current = await StockModel.lockStock(client, {
+        stockId,
+        location_id,
+        component_id
+      })
+      if (!current) {
+        throw new AppError('Stock not found')
+      }
+
+      const newQuantity = await BussinesLogicStock.registerAdjustment({
+        stock: current,
+        unitsPrice
+      })
+
       const result = await StockModel.registerAdjust(client, {
-        quantity: smallSizeAdjust,
+        quantity: newQuantity,
         userId,
-        stockId: stock.id,
-        component_id: stock.component_id,
-        location_id: stock.location_id,
-      });
+        stockId: current.id,
+        component_id: current.component_id,
+        location_id: current.location_id
+      })
       if (!result) {
-        throw new Error("Error updating stock");
+        throw new AppError('Error updating stock')
       }
       await StockMovementModel.createMovement(client, {
-        stock_id: stock.id,
-
-        component_id: stock.component_id,
-
-        location_id: stock.location_id,
-
-        movement_type: "ADJUSTMENT",
-
-        quantity: Number(result.quantity_base) - Number(stock.quantity_base),
-
-        unit_price: stock.avg_price,
-
-        total_price: Number(stock.avg_price) * Number(result.quantity_base),
-
+        stock_id: current.id,
+        component_id: current.component_id,
+        location_id: current.location_id,
+        movement_type: 'ADJUSTMENT',
+        quantity: Number(result.quantity_base) - Number(current.quantity_base),
+        unit_price: current.avg_price,
+        total_price: Number(current.avg_price) * Number(result.quantity_base),
         reason: data.reason,
+        created_by: userId
+      })
+      await client.query('COMMIT')
 
-        created_by: userId,
-      });
-      await client.query("COMMIT");
-
-      return result;
+      return result
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK')
 
-      throw error;
+      throw error
     } finally {
-      client.release();
+      client.release()
     }
   }
 }

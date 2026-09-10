@@ -1,112 +1,98 @@
-import { BrandModel } from "../../models/brandModel.js";
+import { BrandModel } from '../../models/brandModel.js'
+import { AppError } from '../../helpers/AppError.js'
 
 export class BussinesLogicStockContainer {
-  //Convert measures to G or ml
-  static async convertValueUnits({
-    quantity_base, //coerce
-    unit, //coerce
-    value, //coerce
+  // Convert measures to G or ml
+  static async convertValueUnits ({
+    quantity_base, // coerce
+    unit, // coerce
+    value, // coerce
     wholesale_price,
-    consumer_price,
+    consumer_price
   }) {
-    console.log(
-      quantity_base, //coerce
-      unit, //coerce
-      value, //coerce
-      wholesale_price,
-      consumer_price,
-    );
-    let purchaseUnitPrice;
-    let quantityInBase;
-    let wholesaleUnitPrice;
-    let consumerUnitPrice;
+    let purchaseUnitPrice
+    let quantityInBase
+    let wholesaleUnitPrice
+    let consumerUnitPrice
 
     // LIQUID SYSTEM
-    if (unit === "total") {
-      quantityInBase = quantity_base;
-      purchaseUnitPrice = Number(value) / Number(quantity_base);
-      wholesaleUnitPrice = Number(wholesale_price) / Number(quantity_base);
-      consumerUnitPrice = Number(consumer_price) / Number(quantity_base);
+    if (unit === 'total') {
+      quantityInBase = quantity_base
+      purchaseUnitPrice = Number(value) / Number(quantity_base)
+      wholesaleUnitPrice = Number(wholesale_price) / Number(quantity_base)
+      consumerUnitPrice = Number(consumer_price) / Number(quantity_base)
       return {
         purchaseUnitPrice,
         quantityInBase,
         wholesaleUnitPrice,
-        consumerUnitPrice,
-      };
+        consumerUnitPrice
+      }
     }
 
     // WEIGHT SYSTEM
     else {
-      console.log(unit);
-      if (unit === "unit") {
+      if (unit === 'unit') {
         {
           return {
             purchaseUnitPrice: value,
             quantityInBase: quantity_base,
             wholesaleUnitPrice: wholesale_price,
-            consumerUnitPrice: consumer_price,
-          };
+            consumerUnitPrice: consumer_price
+          }
         }
       } else {
-        throw new Error("Error with unit");
+        throw new AppError('Error with unit')
       }
     }
 
     // Prevent division by zero
     if (quantityInBase <= 0 || value <= 0 || !unit) {
-      throw new Error("Quantity must be greater than 0");
+      throw new AppError('Quantity must be greater than 0')
     }
   }
 
-  static async calculeteAVGPrice({ stock, data }) {
-    const currentQuantity = Number(stock.quantity_base);
+  static async calculeteAVGPrice ({ stock, data }) {
+    const currentQuantity = Number(stock.quantity_base)
 
-    const currentAvgPrice = Number(stock.avg_price);
+    const currentAvgPrice = Number(stock.avg_price)
 
-    const incomingQuantity = Number(data.quantityInBase);
-    console.log(data.quantityInBase, data);
-    const incomingAvgPrice = Number(data.purchaseUnitPrice);
+    const incomingQuantity = Number(data.quantityInBase)
+    const incomingAvgPrice = Number(data.purchaseUnitPrice)
 
-    const currentTotalValue = currentQuantity * currentAvgPrice;
+    const currentTotalValue = currentQuantity * currentAvgPrice
 
-    const incomingTotalValue = incomingQuantity * incomingAvgPrice;
+    const incomingTotalValue = incomingQuantity * incomingAvgPrice
 
-    const newQuantity = currentQuantity + incomingQuantity;
+    const newQuantity = currentQuantity + incomingQuantity
 
-    const newTotalValue = currentTotalValue + incomingTotalValue;
+    const newTotalValue = currentTotalValue + incomingTotalValue
 
-    const newAvgPrice = newTotalValue / newQuantity;
+    const newAvgPrice = newTotalValue / newQuantity
 
-    return { newAvgPrice, newQuantity, newTotalValue };
+    return { newAvgPrice, newQuantity, newTotalValue }
   }
 
-  static async registerLoss({ stock, unitsPrice }) {
-    console.log(stock, unitsPrice);
+  static async registerLoss ({ stock, unitsPrice }) {
+    const currentStock = Number(stock.quantity_base)
 
-    const currentStock = Number(stock.quantity_base);
-
-    const lostUnitsStock = Number(unitsPrice.quantityInBase);
+    const lostUnitsStock = Number(unitsPrice.quantityInBase)
 
     if (currentStock < lostUnitsStock) {
-      throw new Error("Stock is lower than loss units");
+      throw new AppError('Stock is lower than loss units')
     }
-    console.log(currentStock - lostUnitsStock, "quantity lost");
 
-    return currentStock - lostUnitsStock;
+    return currentStock - lostUnitsStock
   }
 
-  static async registerAdjustment({ stock, unitsPrice }) {
-    console.log(stock, unitsPrice);
+  static async registerAdjustment ({ stock, unitsPrice }) {
+    const currentStock = Number(stock.quantity_base)
 
-    const currentStock = Number(stock.quantity_base);
-
-    const adjustUnitsStock = Number(unitsPrice.quantityInBase);
+    const adjustUnitsStock = Number(unitsPrice.quantityInBase)
 
     if (currentStock <= 0) {
-      throw new Error("Stock is too low");
+      throw new AppError('Stock is too low')
     }
-    console.log(currentStock - adjustUnitsStock, "quantity Adjustment");
 
-    return currentStock + adjustUnitsStock;
+    return currentStock + adjustUnitsStock
   }
 }

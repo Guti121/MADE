@@ -1,34 +1,37 @@
-import { Router } from "express";
-import { locationController } from "../controllers/locationController.js";
-import { authMiddleware } from "../middleware/authMiddleware.js";
-import { locationSchema } from "../shemas/locationShemas.js";
+import { Router } from 'express'
+import { locationController } from '../controllers/locationController.js'
+import { authMiddleware } from '../middleware/authMiddleware.js'
+import { requireRole } from '../middleware/roleMiddleware.js'
 
-export const locationRoutes = Router();
+export const locationRoutes = Router()
 
 locationRoutes.post(
-  "/create-location",
+  '/create-location',
   authMiddleware,
-  locationController.createLocation,
-);
+  requireRole('owner', 'admin'),
+  locationController.createLocation
+)
 locationRoutes.delete(
-  "/delete-location",
+  '/delete-location',
   authMiddleware,
-  locationController.deleteLocation,
-);
+  requireRole('owner', 'admin'),
+  locationController.deleteLocation
+)
 locationRoutes.put(
-  "/update-location",
+  '/update-location',
   authMiddleware,
-  locationController.updateLocation,
-);
+  requireRole('owner', 'admin'),
+  locationController.updateLocation
+)
 
 locationRoutes.get(
-  "/list-location",
+  '/list-location',
   authMiddleware,
-  locationController.viewLocation,
-);
+  locationController.viewLocation
+)
 
 locationRoutes.get(
-  "/retrieve-location",
+  '/retrieve-location',
   authMiddleware,
-  locationController.retrieveLocation,
-);
+  locationController.retrieveLocation
+)

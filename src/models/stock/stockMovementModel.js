@@ -1,7 +1,7 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
 
 export class StockMovementModel {
-  static async createMovement(client, data) {
+  static async createMovement (client, data) {
     const query = `
       INSERT INTO stock_movements (
         stock_id,
@@ -19,9 +19,7 @@ export class StockMovementModel {
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
       )
       RETURNING *
-    `;
-
-    console.log(data.stock_id);
+    `
 
     const values = [
       data.stock_id,
@@ -33,23 +31,23 @@ export class StockMovementModel {
       data.reason || null,
       data.reference_id || null,
       data.reference_type || null,
-      data.created_by,
-    ];
+      data.created_by
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async listMovements({
+  static async listMovements ({
     brand_id,
     page = 1,
     limit = 10,
     location,
     movement_type,
-    component_id,
+    component_id
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT
@@ -71,37 +69,37 @@ export class StockMovementModel {
       ON l.id = sm.location_id
 
     WHERE c.brand_id = $1
-  `;
+  `
 
-    const values = [brand_id];
+    const values = [brand_id]
 
-    let index = 2;
+    let index = 2
 
     // FILTER BY LOCATION
     if (location) {
-      query += ` AND sm.location_id = $${index}`;
+      query += ` AND sm.location_id = $${index}`
 
-      values.push(location);
+      values.push(location)
 
-      index++;
+      index++
     }
 
     // FILTER BY MOVEMENT TYPE
     if (movement_type) {
-      query += ` AND sm.movement_type = $${index}`;
+      query += ` AND sm.movement_type = $${index}`
 
-      values.push(movement_type);
+      values.push(movement_type)
 
-      index++;
+      index++
     }
 
     // FILTER BY COMPONENT
     if (component_id) {
-      query += ` AND s.component_id = $${index}`;
+      query += ` AND s.component_id = $${index}`
 
-      values.push(component_id);
+      values.push(component_id)
 
-      index++;
+      index++
     }
 
     query += `
@@ -110,11 +108,11 @@ export class StockMovementModel {
     LIMIT $${index}
 
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     // COUNT QUERY
 
@@ -133,43 +131,43 @@ export class StockMovementModel {
       ON l.id = sm.location_id
 
     WHERE c.brand_id = $1
-  `;
+  `
 
-    const countValues = [brand_id];
+    const countValues = [brand_id]
 
-    index = 2;
+    index = 2
 
     if (location) {
       countQuery += `
       AND sm.location_id = $${index}
-    `;
+    `
 
-      countValues.push(location);
+      countValues.push(location)
 
-      index++;
+      index++
     }
 
     if (movement_type) {
       countQuery += `
       AND sm.movement_type = $${index}
-    `;
+    `
 
-      countValues.push(movement_type);
+      countValues.push(movement_type)
 
-      index++;
+      index++
     }
 
     if (component_id) {
       countQuery += `
       AND s.component_id = $${index}
-    `;
+    `
 
-      countValues.push(component_id);
+      countValues.push(component_id)
 
-      index++;
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
@@ -180,7 +178,7 @@ export class StockMovementModel {
 
       limit,
 
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

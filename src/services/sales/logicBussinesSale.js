@@ -1,14 +1,15 @@
-import { StockModel } from "../../models/stock/stockModel.js";
-import { ComponentJarStockModel } from "../../models/stock/componentJarStockModel.js";
-import { StockContainerModel } from "../../models/containers/stockContainerModel.js";
+import { StockModel } from '../../models/stock/stockModel.js'
+import { ComponentJarStockModel } from '../../models/stock/componentJarStockModel.js'
+import { StockContainerModel } from '../../models/containers/stockContainerModel.js'
 
-const money = (n) => Math.round(Number(n) || 0);
-const cost2 = (n) => Number((Number(n) || 0).toFixed(2));
+const money = (n) => Math.round(Number(n) || 0)
+const cost2 = (n) => Number((Number(n) || 0).toFixed(2))
 
-function httpError(status, message) {
-  const err = new Error(message);
-  err.status = status;
-  return err;
+function httpError (status, message) {
+  const err = new Error(message)
+  err.status = status
+  err.public = true // business-rule message, safe to send to the client
+  return err
 }
 
 export class LogicBussinesSale {
@@ -19,26 +20,26 @@ export class LogicBussinesSale {
   // Pricing per item (see Phase 3 spec):
   //   subtotal   = formula_base_price + essence_charge + Σ excess_charge + container_charge
   //   total_cost = essence_cost + Σ component_cost + container_cost
-  static async processSale({ data, itemsContext }) {
-    const isWholesale = Boolean(data.is_wholesale);
+  static async processSale ({ data, itemsContext }) {
+    const isWholesale = Boolean(data.is_wholesale)
 
     // grouped stock needs, checked once at the end
-    const neededComponent = new Map(); // component_id -> qty
-    const neededContainer = new Map(); // container_id -> qty
-    const stockCache = new Map();
-    const jarCache = new Map();
-    const containerCache = new Map();
+    const neededComponent = new Map() // component_id -> qty
+    const neededContainer = new Map() // container_id -> qty
+    const stockCache = new Map()
+    const jarCache = new Map()
+    const containerCache = new Map()
 
     const getStock = async (componentId) => {
       if (!stockCache.has(componentId)) {
         const row = await StockModel.retrieveStockByComponent({
           component_id: componentId,
-          location_id: data.location_id,
-        });
-        stockCache.set(componentId, row || null);
+          location_id: data.location_id
+        })
+        stockCache.set(componentId, row || null)
       }
-      return stockCache.get(componentId);
-    };
+      return stockCache.get(componentId)
+    }
 
     // Pricing (avg/wholesale/consumer price) still comes from bodega (`getStock`
     // above); availability + the sale's decrement come from the jar instead.
@@ -46,104 +47,104 @@ export class LogicBussinesSale {
       if (!jarCache.has(componentId)) {
         const row = await ComponentJarStockModel.retrieveByComponent({
           component_id: componentId,
-          location_id: data.location_id,
-        });
-        jarCache.set(componentId, row || null);
+          location_id: data.location_id
+        })
+        jarCache.set(componentId, row || null)
       }
-      return jarCache.get(componentId);
-    };
+      return jarCache.get(componentId)
+    }
 
     const getContainerStock = async (containerId) => {
       if (!containerCache.has(containerId)) {
         const row = await StockContainerModel.retrieveByContainer({
           container_id: containerId,
-          location_id: data.location_id,
-        });
-        containerCache.set(containerId, row || null);
+          location_id: data.location_id
+        })
+        containerCache.set(containerId, row || null)
       }
-      return containerCache.get(containerId);
-    };
+      return containerCache.get(containerId)
+    }
 
-    let saleSubtotal = 0;
-    let saleDiscount = 0;
-    let saleTax = 0;
-    let saleCost = 0;
+    let saleSubtotal = 0
+    let saleDiscount = 0
+    let saleTax = 0
+    let saleCost = 0
 
     for (const item of data.sales_items) {
-      const ctx = itemsContext.get(item);
-      const { formula, formulaLines } = ctx;
-      const quantity = Number(item.quantity) || 1;
+      const ctx = itemsContext.get(item)
+      const { formula, formulaLines } = ctx
+      const quantity = Number(item.quantity) || 1
 
       // ---- formula base price ----
       const baseUnit = Number(
-        isWholesale ? formula.wholesale_price : formula.consumer_price,
-      );
+        isWholesale ? formula.wholesale_price : formula.consumer_price
+      )
       if (!Number.isFinite(baseUnit) || baseUnit <= 0) {
-        throw httpError(400, "La fórmula no tiene precio configurado");
+        throw httpError(400, 'La fórmula no tiene precio configurado')
       }
-      const formulaUnitPrice = money(baseUnit);
-      const formulaBasePrice = money(baseUnit * quantity);
+      const formulaUnitPrice = money(baseUnit)
+      const formulaBasePrice = money(baseUnit * quantity)
 
       // ---- essence line ----
-      const essenceLine = formulaLines.find((l) => l.type_component_id !== null);
+      const essenceLine = formulaLines.find((l) => l.type_component_id !== null)
       if (!essenceLine) {
-        throw httpError(400, "La fórmula no tiene línea de esencia");
+        throw httpError(400, 'La fórmula no tiene línea de esencia')
       }
 
       const essencePerUnit =
         item.essence_quantity_used != null
           ? Number(item.essence_quantity_used)
-          : Number(essenceLine.quantity);
+          : Number(essenceLine.quantity)
 
       if (essencePerUnit < Number(essenceLine.quantity)) {
         throw httpError(
           400,
-          "Solo se puede aumentar la cantidad de esencia",
-        );
+          'Solo se puede aumentar la cantidad de esencia'
+        )
       }
 
-      const essenceQty = cost2(essencePerUnit * quantity);
-      const essStock = await getStock(item.essence_component_id);
+      const essenceQty = cost2(essencePerUnit * quantity)
+      const essStock = await getStock(item.essence_component_id)
       if (!essStock) {
         throw httpError(
           400,
-          `Stock no encontrado para la esencia ${item.essence_component_id}`,
-        );
+          `Stock no encontrado para la esencia ${item.essence_component_id}`
+        )
       }
       const essSell = Number(
-        isWholesale ? essStock.wholesale_price : essStock.consumer_price,
-      );
+        isWholesale ? essStock.wholesale_price : essStock.consumer_price
+      )
       if (!Number.isFinite(essSell) || essSell <= 0) {
         throw httpError(
           400,
-          "La esencia no tiene precio de venta en la sede",
-        );
+          'La esencia no tiene precio de venta en la sede'
+        )
       }
-      const essenceCharge = money(essSell * essenceQty);
-      const essenceCost = cost2(Number(essStock.avg_price) * essenceQty);
+      const essenceCharge = money(essSell * essenceQty)
+      const essenceCost = cost2(Number(essStock.avg_price) * essenceQty)
 
       neededComponent.set(
         item.essence_component_id,
-        (neededComponent.get(item.essence_component_id) || 0) + essenceQty,
-      );
+        (neededComponent.get(item.essence_component_id) || 0) + essenceQty
+      )
 
       // ---- component lines ----
-      const componentLines = formulaLines.filter((l) => l.component_id !== null);
-      const overrides = new Map();
+      const componentLines = formulaLines.filter((l) => l.component_id !== null)
+      const overrides = new Map()
       for (const ov of item.line_overrides || []) {
         const line = componentLines.find(
-          (l) => l.id === Number(ov.formula_component_id),
-        );
+          (l) => l.id === Number(ov.formula_component_id)
+        )
         if (!line) {
           throw httpError(
             400,
-            `El componente (línea ${ov.formula_component_id}) no pertenece a la fórmula`,
-          );
+            `El componente (línea ${ov.formula_component_id}) no pertenece a la fórmula`
+          )
         }
-        overrides.set(line.id, Number(ov.quantity_used));
+        overrides.set(line.id, Number(ov.quantity_used))
       }
 
-      const expandedComponents = [];
+      const expandedComponents = []
 
       // essence goes first as a sale_item_component (is_essence = true)
       expandedComponents.push({
@@ -154,56 +155,56 @@ export class LogicBussinesSale {
         unit_cost: cost2(essStock.avg_price),
         total_cost: essenceCost,
         unit_price: money(essSell),
-        total_price: essenceCharge,
-      });
+        total_price: essenceCharge
+      })
 
-      let itemExcessCharge = 0;
-      let itemComponentsCost = essenceCost;
+      let itemExcessCharge = 0
+      let itemComponentsCost = essenceCost
 
       for (const line of componentLines) {
         const perUnit = overrides.has(line.id)
           ? overrides.get(line.id)
-          : Number(line.quantity);
+          : Number(line.quantity)
 
         if (perUnit < Number(line.quantity)) {
           throw httpError(
             400,
-            `Solo se puede aumentar la cantidad del componente ${line.component_id}`,
-          );
+            `Solo se puede aumentar la cantidad del componente ${line.component_id}`
+          )
         }
 
-        const billed = cost2(perUnit * quantity);
-        const formulaTotal = Number(line.quantity) * quantity;
-        const excess = Math.max(0, billed - formulaTotal);
+        const billed = cost2(perUnit * quantity)
+        const formulaTotal = Number(line.quantity) * quantity
+        const excess = Math.max(0, billed - formulaTotal)
 
-        const st = await getStock(line.component_id);
+        const st = await getStock(line.component_id)
         if (!st) {
           throw httpError(
             400,
-            `Stock no encontrado para el componente ${line.component_id}`,
-          );
+            `Stock no encontrado para el componente ${line.component_id}`
+          )
         }
 
         const sellUnit = Number(
-          isWholesale ? st.wholesale_price : st.consumer_price,
-        );
+          isWholesale ? st.wholesale_price : st.consumer_price
+        )
         if (excess > 0 && (!Number.isFinite(sellUnit) || sellUnit <= 0)) {
           throw httpError(
             400,
-            `El componente ${line.component_id} no tiene precio de venta en la sede`,
-          );
+            `El componente ${line.component_id} no tiene precio de venta en la sede`
+          )
         }
 
-        const excessCharge = excess > 0 ? money(sellUnit * excess) : 0;
-        const compCost = cost2(Number(st.avg_price) * billed);
+        const excessCharge = excess > 0 ? money(sellUnit * excess) : 0
+        const compCost = cost2(Number(st.avg_price) * billed)
 
-        itemExcessCharge += excessCharge;
-        itemComponentsCost = cost2(itemComponentsCost + compCost);
+        itemExcessCharge += excessCharge
+        itemComponentsCost = cost2(itemComponentsCost + compCost)
 
         neededComponent.set(
           line.component_id,
-          (neededComponent.get(line.component_id) || 0) + billed,
-        );
+          (neededComponent.get(line.component_id) || 0) + billed
+        )
 
         expandedComponents.push({
           component_id: line.component_id,
@@ -213,45 +214,45 @@ export class LogicBussinesSale {
           unit_cost: cost2(st.avg_price),
           total_cost: compCost,
           unit_price: Number.isFinite(sellUnit) ? money(sellUnit) : 0,
-          total_price: excessCharge,
-        });
+          total_price: excessCharge
+        })
       }
 
       // ---- container (optional, full charge) ----
-      let containerCharge = 0;
-      let containerCost = 0;
-      let expandedContainer = null;
+      let containerCharge = 0
+      let containerCost = 0
+      let expandedContainer = null
 
       if (item.sales_container) {
         const { container_id: containerId, quantity_used: rawQty } =
-          item.sales_container;
-        const contQty = cost2(rawQty);
+          item.sales_container
+        const contQty = cost2(rawQty)
 
-        const cs = await getContainerStock(containerId);
+        const cs = await getContainerStock(containerId)
         if (!cs) {
           throw httpError(
             400,
-            `Stock de envase no encontrado para el envase ${containerId}`,
-          );
+            `Stock de envase no encontrado para el envase ${containerId}`
+          )
         }
 
         const csSell = Number(
-          isWholesale ? cs.wholesale_price : cs.consumer_price,
-        );
+          isWholesale ? cs.wholesale_price : cs.consumer_price
+        )
         if (!Number.isFinite(csSell) || csSell <= 0) {
           throw httpError(
             400,
-            "El envase no tiene precio de venta en la sede",
-          );
+            'El envase no tiene precio de venta en la sede'
+          )
         }
 
-        containerCharge = money(csSell * contQty);
-        containerCost = cost2(Number(cs.avg_price) * contQty);
+        containerCharge = money(csSell * contQty)
+        containerCost = cost2(Number(cs.avg_price) * contQty)
 
         neededContainer.set(
           containerId,
-          (neededContainer.get(containerId) || 0) + contQty,
-        );
+          (neededContainer.get(containerId) || 0) + contQty
+        )
 
         expandedContainer = {
           container_id: containerId,
@@ -260,65 +261,76 @@ export class LogicBussinesSale {
           unit_cost: cost2(cs.avg_price),
           total_cost: containerCost,
           unit_price: money(csSell),
-          total_price: containerCharge,
-        };
+          total_price: containerCharge
+        }
       }
 
       // ---- item totals ----
       const subtotalItem = money(
-        formulaBasePrice + essenceCharge + itemExcessCharge + containerCharge,
-      );
-      const totalCostItem = cost2(itemComponentsCost + containerCost);
+        formulaBasePrice + essenceCharge + itemExcessCharge + containerCharge
+      )
+      const totalCostItem = cost2(itemComponentsCost + containerCost)
 
-      item.formula_id = formula.id;
-      item.formula_name_snapshot = formula.name;
-      item.formula_unit_price = formulaUnitPrice;
-      item.formula_base_price = formulaBasePrice;
-      item.quantity = quantity;
-      item.subtotal = subtotalItem;
-      item.total_cost = totalCostItem;
-      item.discount = cost2(item.discount);
-      item.tax = cost2(item.tax);
-      item.sales_components = expandedComponents;
-      item.sales_container = expandedContainer;
+      item.formula_id = formula.id
+      item.formula_name_snapshot = formula.name
+      item.formula_unit_price = formulaUnitPrice
+      item.formula_base_price = formulaBasePrice
+      item.quantity = quantity
+      item.subtotal = subtotalItem
+      item.total_cost = totalCostItem
+      item.discount = cost2(item.discount)
+      item.tax = cost2(item.tax)
 
-      saleSubtotal += subtotalItem;
-      saleDiscount += item.discount;
-      saleTax += item.tax;
-      saleCost = cost2(saleCost + totalCostItem);
+      // A discount can never exceed what is being charged for the line —
+      // otherwise the sale records an arbitrary negative profit.
+      if (item.discount > subtotalItem) {
+        throw httpError(400, 'El descuento no puede superar el subtotal del ítem')
+      }
+      item.sales_components = expandedComponents
+      item.sales_container = expandedContainer
+
+      saleSubtotal += subtotalItem
+      saleDiscount += item.discount
+      saleTax += item.tax
+      saleCost = cost2(saleCost + totalCostItem)
     }
 
     // ---- grouped stock validation ----
     // A sale draws from the jar (the small "at hand" quantity), not bodega —
     // bodega only moves via purchases or a manual transfer into the jar.
     for (const [componentId, needed] of neededComponent) {
-      const jar = await getJarStock(componentId);
+      const jar = await getJarStock(componentId)
       if (!jar || Number(jar.quantity_base) < needed) {
         throw httpError(
           400,
-          `Stock de tarro insuficiente para el componente ${componentId}, recarga el jar primero`,
-        );
+          `Stock de tarro insuficiente para el componente ${componentId}, recarga el jar primero`
+        )
       }
     }
     for (const [containerId, needed] of neededContainer) {
-      const cs = containerCache.get(containerId);
+      const cs = containerCache.get(containerId)
       if (!cs || Number(cs.quantity) < needed) {
         throw httpError(
           400,
-          `Stock insuficiente para el envase ${containerId}`,
-        );
+          `Stock insuficiente para el envase ${containerId}`
+        )
       }
     }
 
     // ---- sale rollup ----
-    data.subtotal = money(saleSubtotal);
-    data.discount_total = cost2(saleDiscount);
-    data.tax_total = cost2(saleTax);
-    data.total_cost = saleCost;
-    data.total_profit = cost2(data.subtotal - data.discount_total - data.total_cost);
-    data.is_wholesale = isWholesale;
-    data.client_id = data.client_id ?? null;
+    data.subtotal = money(saleSubtotal)
+    data.discount_total = cost2(saleDiscount)
+    data.tax_total = cost2(saleTax)
+    data.total_cost = saleCost
 
-    return data;
+    if (data.discount_total > data.subtotal) {
+      throw httpError(400, 'El descuento total no puede superar el subtotal')
+    }
+
+    data.total_profit = cost2(data.subtotal - data.discount_total - data.total_cost)
+    data.is_wholesale = isWholesale
+    data.client_id = data.client_id ?? null
+
+    return data
   }
 }

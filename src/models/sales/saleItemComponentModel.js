@@ -1,5 +1,5 @@
 export class SaleItemComponentModel {
-  static async createComponent(client, data) {
+  static async createComponent (client, data) {
     const query = `
       INSERT INTO sale_item_components (
         sale_item_id,
@@ -16,7 +16,7 @@ export class SaleItemComponentModel {
         $1,$2,$3,$4,$5,$6,$7,$8,$9
       )
       RETURNING *
-    `;
+    `
 
     const values = [
       data.sale_item_id,
@@ -27,11 +27,11 @@ export class SaleItemComponentModel {
       data.unit_cost,
       data.unit_price,
       data.total_cost,
-      data.total_price,
-    ];
+      data.total_price
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 }

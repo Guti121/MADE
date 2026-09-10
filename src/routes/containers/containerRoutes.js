@@ -1,60 +1,23 @@
-import { Router } from "express";
-import { authMiddleware } from "../../middleware/authMiddleware.js";
-import { validateBrandAccess } from "../../middleware/accessMiddleware.js";
-import { ContainerController } from "../../controllers/containers/containerController.js";
-import { TypeContainerController } from "../../controllers/containers/typeContainersController.js";
+import { Router } from 'express'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
+import { validateBrandAccess } from '../../middleware/accessMiddleware.js'
+import { requireRole } from '../../middleware/roleMiddleware.js'
+import { ContainerController } from '../../controllers/containers/containerController.js'
+import { TypeContainerController } from '../../controllers/containers/typeContainersController.js'
 
-export const containerRouter = Router();
+export const containerRouter = Router()
 
-//type Containers
-containerRouter.post(
-  "/create-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeContainerController.createTypeContainer,
-);
-containerRouter.delete(
-  "/delete-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeContainerController.deleteTypeContainer,
-);
-containerRouter.get(
-  "/list-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeContainerController.ListTypeContainer,
-);
+const write = [authMiddleware, requireRole('owner', 'admin'), validateBrandAccess]
+const read = [authMiddleware, validateBrandAccess]
 
-containerRouter.post(
-  "/update-type",
-  authMiddleware,
-  validateBrandAccess,
-  TypeContainerController.updateTypeContainer,
-);
+// type Containers
+containerRouter.post('/create-type', ...write, TypeContainerController.createTypeContainer)
+containerRouter.delete('/delete-type', ...write, TypeContainerController.deleteTypeContainer)
+containerRouter.get('/list-type', ...read, TypeContainerController.ListTypeContainer)
+containerRouter.post('/update-type', ...write, TypeContainerController.updateTypeContainer)
 
-//Containers
-containerRouter.post(
-  "/create",
-  authMiddleware,
-  validateBrandAccess,
-  ContainerController.createContainer,
-);
-containerRouter.post(
-  "/update",
-  authMiddleware,
-  validateBrandAccess,
-  ContainerController.updateContainer,
-);
-containerRouter.delete(
-  "/delete",
-  authMiddleware,
-  validateBrandAccess,
-  ContainerController.deleteContainer,
-);
-containerRouter.get(
-  "/list",
-  authMiddleware,
-  validateBrandAccess,
-  ContainerController.listContainer,
-);
+// Containers
+containerRouter.post('/create', ...write, ContainerController.createContainer)
+containerRouter.post('/update', ...write, ContainerController.updateContainer)
+containerRouter.delete('/delete', ...write, ContainerController.deleteContainer)
+containerRouter.get('/list', ...read, ContainerController.listContainer)

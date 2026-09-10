@@ -1,5 +1,5 @@
 export class SaleItemContainerModel {
-  static async createContainer(client, data) {
+  static async createContainer (client, data) {
     const query = `
       INSERT INTO sale_item_containers (
         sale_item_id,
@@ -15,7 +15,7 @@ export class SaleItemContainerModel {
         $1,$2,$3,$4,$5,$6,$7,$8
       )
       RETURNING *
-    `;
+    `
 
     const values = [
       data.sale_item_id,
@@ -25,11 +25,11 @@ export class SaleItemContainerModel {
       data.unit_cost,
       data.unit_price,
       data.total_cost,
-      data.total_price,
-    ];
+      data.total_price
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 }

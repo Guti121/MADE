@@ -1,41 +1,41 @@
-import { validateSchema } from "../../helpers/validateSchema.js";
-import { FormulaModel } from "../../models/formula/formulaModel.js";
-import { BussinesLogicFormula } from "../../services/formula/bussinesLogicFormula.js";
-import { FormulaService } from "../../services/formula/formulaService.js";
+import { validateSchema } from '../../helpers/validateSchema.js'
+import { FormulaModel } from '../../models/formula/formulaModel.js'
+import { BussinesLogicFormula } from '../../services/formula/bussinesLogicFormula.js'
+import { FormulaService } from '../../services/formula/formulaService.js'
 import {
   createFormulaSchema,
   deleteFormulaSchema,
   ListFormulaSchema,
   ListFormulaSchemalocation,
-  previewFormulaSchema,
-} from "../../shemas/formula/formulaSchemas.js";
+  previewFormulaSchema
+} from '../../shemas/formula/formulaSchemas.js'
 
 export class formulaController {
   // Estimated build cost from the multi-location average component price.
   // Shown to the user while building a formula so they can set its prices.
-  static async previewFormula(req, res) {
+  static async previewFormula (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { data, error } = validateSchema(previewFormulaSchema, req.body);
+      const { id: userId } = req.user
+      const { data, error } = validateSchema(previewFormulaSchema, req.body)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
       const lines = await BussinesLogicFormula.buildFormulaLines({
         data,
-        userId,
-      });
+        userId
+      })
 
       return res.status(200).json({
-        message: "FORMULA PREVIEW",
+        message: 'FORMULA PREVIEW',
         result: {
           essence: {
             type: lines.essenceLine.type_name,
             quantityInBase: lines.essenceLine.quantityInBase,
             unit: lines.essenceLine.unit,
             cost: null,
-            note: "Sin coste por ahora; se define al facturar la esencia concreta",
+            note: 'Sin coste por ahora; se define al facturar la esencia concreta'
           },
           components: lines.componentLines.map((c) => ({
             component_id: c.component_id,
@@ -45,88 +45,89 @@ export class formulaController {
             avg_cost_per_base: c.avg_cost_per_base,
             sedes_con_stock: c.sedes_con_stock,
             line_cost: c.line_cost,
-            has_price: c.has_price,
+            has_price: c.has_price
           })),
           totales: {
             base_quantity: lines.sumTotalUnits,
             costo_total: lines.costoTotal,
-            componentes_sin_precio: lines.componentesSinPrecio,
-          },
-        },
-      });
+            componentes_sin_precio: lines.componentesSinPrecio
+          }
+        }
+      })
     } catch (error) {
-      console.log(error);
-      return res.status(400).json({ error: "Error with preview" });
+      return res.status(400).json({ error: 'Error with preview' })
     }
   }
 
-  static async createFormula(req, res) {
+  static async createFormula (req, res) {
     try {
-      const { id: userId } = req.user;
-      const { id: brandId } = req.brand;
-      const { data, error } = validateSchema(createFormulaSchema, req.body);
+      const { id: userId } = req.user
+      const { id: brandId } = req.brand
+      const { data, error } = validateSchema(createFormulaSchema, req.body)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
       const lines = await BussinesLogicFormula.buildFormulaLines({
         data,
-        userId,
-      });
+        userId
+      })
 
       const result = await FormulaService.createFormula({
         userId,
         brandId,
         data,
-        lines,
-      });
+        lines
+      })
 
       if (!result) {
         return res.status(400).json({
-          error: "error creation",
-        });
+          error: 'error creation'
+        })
       }
 
       return res.status(201).json({
-        message: "FORMULA CREATED",
-        result,
-      });
+        message: 'FORMULA CREATED',
+        result
+      })
     } catch (error) {
-      console.log(error);
-      return res.status(400).json({ error: "Error with creation" });
+      return res.status(400).json({ error: 'Error with creation' })
     }
   }
 
-  static async deleteFormula(req, res) {
+  static async deleteFormula (req, res) {
     try {
-      const { id: brandId } = req.brand;
-      const { data, error } = validateSchema(deleteFormulaSchema, req.query);
+      const { id: brandId } = req.brand
+      const { data, error } = validateSchema(deleteFormulaSchema, req.query)
 
-      const result = await FormulaModel.deleteFormula({ brandId, data });
+      if (error) {
+        return res.status(400).json({ error })
+      }
+
+      const result = await FormulaModel.deleteFormula({ brandId, data })
 
       if (!result) {
         return res.status(404).json({
-          error: "error Not Found",
-        });
+          error: 'error Not Found'
+        })
       }
       res.status(200).json({
-        message: "FORMULA DELETED",
-        result,
-      });
+        message: 'FORMULA DELETED',
+        result
+      })
     } catch (error) {
-      console.log(error);
-      res.status(404).json({ error: "Error with delete" });
+      res.status(404).json({ error: 'Error with delete' })
     }
   }
 
-  static async listFormula(req, res) {
+  static async listFormula (req, res) {
     try {
-      const { id: brandId } = req.brand;
-      const { data, error } = validateSchema(ListFormulaSchema, req.query);
+      const { id: brandId } = req.brand
+      const { data, error } = validateSchema(ListFormulaSchema, req.query)
 
       if (error) {
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
       const result = await FormulaModel.listStock({
@@ -134,33 +135,31 @@ export class formulaController {
         page: data.page,
         limit: data.limit,
         name: data.name,
-        quantity: data.quantity,
-      });
+        quantity: data.quantity
+      })
       if (!result) {
-        return res.status(404).json({ error: "not fount component" });
+        return res.status(404).json({ error: 'not fount component' })
       }
       return res.status(200).json({
-        message: "LIST SUCCESSFULLY",
-        result,
-      });
+        message: 'LIST SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.log(error);
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
-  static async listFormuByLocation(req, res) {
+
+  static async listFormuByLocation (req, res) {
     try {
-      const { id: brandId } = req.brand;
+      const { id: brandId } = req.brand
       const { data, error } = validateSchema(
         ListFormulaSchemalocation,
-        req.query,
-      );
-      console.log(data);
+        req.query
+      )
       if (error) {
-        console.log(error);
-        return res.status(400).json({ error });
+        return res.status(400).json({ error })
       }
 
       const result = await FormulaModel.listFormulaLocation({
@@ -169,20 +168,19 @@ export class formulaController {
         limit: data.limit,
         location_id: data.id,
         name: data.name,
-        quantity: data.quantity,
-      });
+        quantity: data.quantity
+      })
       if (!result) {
-        return res.status(404).json({ error: "not fount component" });
+        return res.status(404).json({ error: 'not fount component' })
       }
       return res.status(200).json({
-        message: "LIST SUCCESSFULLY",
-        result,
-      });
+        message: 'LIST SUCCESSFULLY',
+        result
+      })
     } catch (error) {
-      console.log(error, "error");
       return res.status(500).json({
-        error: "Internal server error",
-      });
+        error: 'Internal server error'
+      })
     }
   }
 }

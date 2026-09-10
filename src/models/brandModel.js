@@ -1,30 +1,31 @@
-import { pool } from "../config/db.js";
+import { pool } from '../config/db.js'
 
 export class BrandModel {
-  static async createBrand({ name, userId, weight }) {
+  static async createBrand ({ name, userId, weight }) {
     const query = `INSERT INTO brands (name , user_id, weight) 
     VALUES ($1, $2, $3)
-    RETURNING *;`;
+    RETURNING *;`
 
-    const values = [name, userId, weight];
-    const result = await pool.query(query, values);
-    return result.rows[0];
+    const values = [name, userId, weight]
+    const result = await pool.query(query, values)
+    return result.rows[0]
   }
-  static async deleteBrand({ userId }) {
+
+  static async deleteBrand ({ userId }) {
     const query = `
       DELETE FROM brands 
       WHERE user_id = $1 
       RETURNING *;
-    `;
+    `
 
-    const values = [userId];
+    const values = [userId]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0]; // ✅ now works
+    return result.rows[0] // ✅ now works
   }
 
-  static async updateBrand({ userId, name, weight }) {
+  static async updateBrand ({ userId, name, weight }) {
     const query = `
         UPDATE brands
         SET 
@@ -32,20 +33,20 @@ export class BrandModel {
           weight = COALESCE($2, weight)
         WHERE user_id = $3
         RETURNING *;
-      `;
+      `
 
-    const values = [name, weight, userId];
+    const values = [name, weight, userId]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async viewBrand({ userId }) {
-    const query = `SELECT * FROM brands WHERE user_id = $1`;
-    const values = [userId];
+  static async viewBrand ({ userId }) {
+    const query = 'SELECT * FROM brands WHERE user_id = $1'
+    const values = [userId]
 
-    const result = await pool.query(query, values);
-    return result.rows[0] || null;
+    const result = await pool.query(query, values)
+    return result.rows[0] || null
   }
 }

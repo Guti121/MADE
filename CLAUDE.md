@@ -11,7 +11,7 @@ MADE backend: a Node.js/Express REST API for managing a brand's inventory — co
 - `npm run dev` — start the server with nodemon (auto-restart on change). Entry point is `app.js`, default port 1234 (`PORT` env var).
 - No test suite is configured (`npm test` is a stub that exits with an error).
 - No lint script is wired up, but `eslintConfig` extends `standard` and `standard` is a devDependency — run ad hoc with `npx standard` if linting is needed.
-- Requires a running PostgreSQL instance. Connection is configured via env vars (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) plus `SALT_ROUNDS`, `SECRET_KEY_TOKEN`, `REFRESH_TOKEN_SECRET`. No migration/seed scripts exist in the repo — schema is assumed to already exist in the target database.
+- Requires a running PostgreSQL instance. Connection is configured via env vars (`DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`) plus `SALT_ROUNDS`, `SECRET_KEY_TOKEN`, `REFRESH_TOKEN_SECRET`, and optionally `NODE_ENV`, `CORS_ORIGIN`, `COOKIE_SECRET`, `LOG_LEVEL`, `PORT` (see `.env.example`). The server refuses to start if `SECRET_KEY_TOKEN` or `REFRESH_TOKEN_SECRET` is unset — there is no fallback. `database/schema.sql` is a baseline dump; incremental changes live in `database/migrations/NNNN_*.sql` applied via `database/run-migration.js` (raw-SQL runner, no version table yet).
 
 ## Architecture
 
@@ -43,7 +43,7 @@ Each component also has a second, smaller stock tier per location: `component_ja
 
 ### Auth flow
 
-JWT-based, two tokens: a short-lived `access_token` (15m, signed with `SECRET_KEY_TOKEN`) and a longer-lived `refresh_token` (7d, signed with `REFRESH_TOKEN_SECRET`, persisted server-side and checked against the DB row on refresh so a token can be invalidated by deleting the session). Both are set as httpOnly, `sameSite: strict` cookies. Passwords are hashed with bcrypt (`SALT_ROUNDS`). `config/config.js` has a hardcoded fallback for `SECRET_KEY_TOKEN` used only when the env var is unset.
+JWT-based, two tokens: a short-lived `access_token` (15m, signed with `SECRET_KEY_TOKEN`) and a longer-lived `refresh_token` (7d, signed with `REFRESH_TOKEN_SECRET`). Only a SHA-256 hash of the refresh token is persisted in `user_sessions` (with `expires_at`); on refresh it is looked up by hash joined to `users.state = true`, then rotated. A valid-signature token with no matching active session row is treated as reuse and revokes every session for that user. Both cookies are httpOnly, `sameSite: strict`, and `secure` when `NODE_ENV === "production"`. Passwords are hashed with bcrypt (`SALT_ROUNDS`, min 12). `config/config.js` has NO secret fallback — a missing secret is a hard startup failure.
 
 ### CORS
 

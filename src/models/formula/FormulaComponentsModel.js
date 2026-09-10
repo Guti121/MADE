@@ -1,9 +1,9 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
 
 export class FormulaComponentsModel {
   // Plain list of a formula's lines (component lines + the essence type line).
   // Used by the billing flow to expand a sale item.
-  static async listByFormula(formulaId) {
+  static async listByFormula (formulaId) {
     const query = `
       SELECT
         fc.id,
@@ -16,12 +16,12 @@ export class FormulaComponentsModel {
       LEFT JOIN components c ON c.id = fc.component_id
       WHERE fc.formula_id = $1
       ORDER BY fc.id
-    `;
-    const result = await pool.query(query, [formulaId]);
-    return result.rows;
+    `
+    const result = await pool.query(query, [formulaId])
+    return result.rows
   }
 
-  static async retrieveComponents({ brandId, data }) {
+  static async retrieveComponents ({ brandId, data }) {
     const query = `
     SELECT
       fc.id,
@@ -82,12 +82,12 @@ export class FormulaComponentsModel {
           AND fc2.component_id IS NOT NULL
           AND c2.state = FALSE
       )
-  `;
+  `
 
-    const values = [brandId, data.id];
+    const values = [brandId, data.id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows;
+    return result.rows
   }
 }

@@ -1,20 +1,21 @@
-import { SECRET_KEY_TOKEN } from "../config/config.js";
-import jwt from "jsonwebtoken";
-// the following middleware verify the token and return info of user
+import jwt from 'jsonwebtoken'
+
+import { SECRET_KEY_TOKEN } from '../config/config.js'
+
+// Verifies the access_token JWT from the httpOnly cookie and attaches the
+// decoded payload to req.user. Any verification failure (missing, expired, bad
+// signature, malformed) returns the same generic 401.
 export const authMiddleware = (req, res, next) => {
-  const token = req.cookies.access_token;
-  console.log(token);
+  const token = req.cookies.access_token
+
   if (!token) {
-    return res.status(401).json({ error: "No token provided" });
+    return res.status(401).json({ error: 'Authentication required' })
   }
 
-  console.log(token);
   try {
-    const decoded = jwt.verify(token, SECRET_KEY_TOKEN);
-    console.log(decoded, "DECODE MIDDLEWARE");
-    req.user = decoded; //Save user Info
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: "Access token expired" });
+    req.user = jwt.verify(token, SECRET_KEY_TOKEN, { algorithms: ['HS256'] })
+    next()
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' })
   }
-};
+}

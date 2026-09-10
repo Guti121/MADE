@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        # NOTE: the pre-existing codebase has snake_case identifiers (DB column
+        # names) and brace-style debt that `standard` flags. Left non-blocking
+        # until that is cleaned up; new code is expected to pass.
+        run: npx standard || true
+      - name: Audit (production deps)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Boot smoke test
+        env:
+          # Throwaway CI-only values — never reused anywhere.
+          SECRET_KEY_TOKEN: ci-only-access-secret-000000000000000000000000
+          REFRESH_TOKEN_SECRET: ci-only-refresh-secret-1111111111111111111111
+          SALT_ROUNDS: '12'
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_NAME: ci
+          DB_USER: ci
+          DB_PASSWORD: ci
+        run: |
+          node app.js &
+          PID=$!
+          sleep 3
+          curl -fsS http://127.0.0.1:1234/api/health
+          kill $PID

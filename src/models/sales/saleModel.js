@@ -1,7 +1,7 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
 
 export class SaleModel {
-  static async createSale(client, data) {
+  static async createSale (client, data) {
     const query = `
       INSERT INTO sales (
         location_id,
@@ -20,7 +20,7 @@ export class SaleModel {
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
       )
       RETURNING *
-    `;
+    `
 
     const values = [
       data.location_id,
@@ -33,66 +33,69 @@ export class SaleModel {
       data.total_profit,
       data.is_wholesale,
       data.created_by,
-      data.payment_method || "EFECTIVO",
-    ];
+      data.payment_method || 'EFECTIVO'
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async listSales({
+  static async listSales ({
     location_id,
     page = 1,
     limit = 10,
     client_id,
     payment_method,
     start_date,
-    end_date,
+    end_date
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
-    const conditions = [];
-    const values = [];
-    let param = 1;
+    // location_id is the tenant scope here — never run this query unscoped.
+    if (!location_id) {
+      throw new Error('listSales requires a location_id')
+    }
+
+    const conditions = []
+    const values = []
+    let param = 1
 
     // LOCATION
-    if (location_id) {
-      conditions.push(`s.location_id = $${param++}`);
-      values.push(location_id);
-    }
+    conditions.push(`s.location_id = $${param++}`)
+    values.push(location_id)
 
     // CLIENT
     if (client_id) {
-      conditions.push(`s.client_id = $${param++}`);
-      values.push(client_id);
+      conditions.push(`s.client_id = $${param++}`)
+      values.push(client_id)
     }
 
     // PAYMENT METHOD
     if (payment_method) {
-      conditions.push(`s.payment_method = $${param++}`);
-      values.push(payment_method);
+      conditions.push(`s.payment_method = $${param++}`)
+      values.push(payment_method)
     }
 
     // START DATE
     if (start_date) {
-      conditions.push(`DATE(s.created_at) >= $${param++}`);
-      values.push(start_date);
+      conditions.push(`DATE(s.created_at) >= $${param++}`)
+      values.push(start_date)
     }
 
     // END DATE
     if (end_date) {
-      conditions.push(`DATE(s.created_at) <= $${param++}`);
-      values.push(end_date);
+      conditions.push(`DATE(s.created_at) <= $${param++}`)
+      values.push(end_date)
     }
 
     const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-    //================ MAIN QUERY ====================
+    //= =============== MAIN QUERY ====================
 
-    values.push(limit);
-    values.push(offset);
+    values.push(limit)
+    values.push(offset)
 
     const query = `
     SELECT
@@ -138,45 +141,45 @@ export class SaleModel {
 
     LIMIT $${param++}
     OFFSET $${param++}
-  `;
+  `
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
-    //================ COUNT QUERY ====================
+    //= =============== COUNT QUERY ====================
 
-    const countConditions = [];
-    const countValues = [];
-    let countParam = 1;
+    const countConditions = []
+    const countValues = []
+    let countParam = 1
 
     if (location_id) {
-      countConditions.push(`location_id = $${countParam++}`);
-      countValues.push(location_id);
+      countConditions.push(`location_id = $${countParam++}`)
+      countValues.push(location_id)
     }
 
     if (client_id) {
-      countConditions.push(`client_id = $${countParam++}`);
-      countValues.push(client_id);
+      countConditions.push(`client_id = $${countParam++}`)
+      countValues.push(client_id)
     }
 
     if (payment_method) {
-      countConditions.push(`payment_method = $${countParam++}`);
-      countValues.push(payment_method);
+      countConditions.push(`payment_method = $${countParam++}`)
+      countValues.push(payment_method)
     }
 
     if (start_date) {
-      countConditions.push(`DATE(created_at) >= $${countParam++}`);
-      countValues.push(start_date);
+      countConditions.push(`DATE(created_at) >= $${countParam++}`)
+      countValues.push(start_date)
     }
 
     if (end_date) {
-      countConditions.push(`DATE(created_at) <= $${countParam++}`);
-      countValues.push(end_date);
+      countConditions.push(`DATE(created_at) <= $${countParam++}`)
+      countValues.push(end_date)
     }
 
     const countWhere =
       countConditions.length > 0
-        ? `WHERE ${countConditions.join(" AND ")}`
-        : "";
+        ? `WHERE ${countConditions.join(' AND ')}`
+        : ''
 
     const countQuery = `
     SELECT COUNT(*) AS total
@@ -184,9 +187,9 @@ export class SaleModel {
     FROM sales
 
     ${countWhere}
-  `;
+  `
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
@@ -197,32 +200,32 @@ export class SaleModel {
 
       limit,
 
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 
-  static async getSalesStatistics({ location_id, start_date, end_date }) {
-    const conditions = [];
-    const values = [];
-    let param = 1;
+  static async getSalesStatistics ({ location_id, start_date, end_date }) {
+    const conditions = []
+    const values = []
+    let param = 1
 
     if (location_id) {
-      conditions.push(`location_id = $${param++}`);
-      values.push(location_id);
+      conditions.push(`location_id = $${param++}`)
+      values.push(location_id)
     }
 
     if (start_date) {
-      conditions.push(`DATE(created_at) >= $${param++}`);
-      values.push(start_date);
+      conditions.push(`DATE(created_at) >= $${param++}`)
+      values.push(start_date)
     }
 
     if (end_date) {
-      conditions.push(`DATE(created_at) <= $${param++}`);
-      values.push(end_date);
+      conditions.push(`DATE(created_at) <= $${param++}`)
+      values.push(end_date)
     }
 
     const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const query = `
       SELECT
@@ -240,14 +243,14 @@ export class SaleModel {
       FROM sales
 
       ${whereClause}
-    `;
+    `
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async retrieveSaleDetail({ id, location_id }) {
+  static async retrieveSaleDetail ({ id, location_id }) {
     const saleResult = await pool.query(
       `
     SELECT
@@ -262,13 +265,13 @@ export class SaleModel {
     WHERE s.id = $1
       AND s.location_id = $2
     `,
-      [id, location_id],
-    );
+      [id, location_id]
+    )
 
-    const sale = saleResult.rows[0];
+    const sale = saleResult.rows[0]
 
     if (!sale) {
-      return null;
+      return null
     }
 
     const itemsResult = await pool.query(
@@ -277,17 +280,17 @@ export class SaleModel {
     FROM sales_items
     WHERE sale_id = $1
     `,
-      [sale.id],
-    );
+      [sale.id]
+    )
 
-    const items = itemsResult.rows;
+    const items = itemsResult.rows
 
     if (!items.length) {
-      sale.sales_items = [];
-      return sale;
+      sale.sales_items = []
+      return sale
     }
 
-    const saleItemIds = items.map((item) => item.id);
+    const saleItemIds = items.map((item) => item.id)
 
     const componentsResult = await pool.query(
       `
@@ -299,8 +302,8 @@ export class SaleModel {
       ON c.id = sic.component_id
     WHERE sic.sale_item_id = ANY($1)
     `,
-      [saleItemIds],
-    );
+      [saleItemIds]
+    )
 
     const containersResult = await pool.query(
       `
@@ -312,31 +315,31 @@ export class SaleModel {
       ON c.id = sit.container_id
     WHERE sit.sale_item_id = ANY($1)
     `,
-      [saleItemIds],
-    );
+      [saleItemIds]
+    )
 
-    const componentsMap = new Map();
+    const componentsMap = new Map()
 
     for (const component of componentsResult.rows) {
       if (!componentsMap.has(component.sale_item_id)) {
-        componentsMap.set(component.sale_item_id, []);
+        componentsMap.set(component.sale_item_id, [])
       }
 
-      componentsMap.get(component.sale_item_id).push(component);
+      componentsMap.get(component.sale_item_id).push(component)
     }
 
-    const containersMap = new Map();
+    const containersMap = new Map()
 
     for (const container of containersResult.rows) {
-      containersMap.set(container.sale_item_id, container);
+      containersMap.set(container.sale_item_id, container)
     }
 
     sale.sales_items = items.map((item) => ({
       ...item,
       sales_components: componentsMap.get(item.id) || [],
-      sales_container: containersMap.get(item.id) || null,
-    }));
+      sales_container: containersMap.get(item.id) || null
+    }))
 
-    return sale;
+    return sale
   }
 }

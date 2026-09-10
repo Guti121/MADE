@@ -1,40 +1,42 @@
-import { Router } from "express";
-import { authMiddleware } from "../../middleware/authMiddleware.js";
+import { Router } from 'express'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
 import {
   validateBrandAccess,
   validateComponentAccess,
-  validateLocationAccess,
-} from "../../middleware/accessMiddleware.js";
-import { JarStockController } from "../../controllers/stock/jarStockController.js";
+  validateLocationAccess
+} from '../../middleware/accessMiddleware.js'
+import { requireRole } from '../../middleware/roleMiddleware.js'
+import { JarStockController } from '../../controllers/stock/jarStockController.js'
 
-export const jarStockRouter = Router();
+export const jarStockRouter = Router()
 
 jarStockRouter.post(
-  "/transfer",
+  '/transfer',
   authMiddleware,
+  requireRole('owner', 'admin'),
   validateLocationAccess,
   validateComponentAccess,
-  JarStockController.transferToJar,
-);
+  JarStockController.transferToJar
+)
 
 jarStockRouter.get(
-  "/retrieve",
+  '/retrieve',
   authMiddleware,
   validateLocationAccess,
-  JarStockController.retrieveJarStock,
-);
+  JarStockController.retrieveJarStock
+)
 
 jarStockRouter.get(
-  "/list",
+  '/list',
   authMiddleware,
   validateBrandAccess,
   validateLocationAccess,
-  JarStockController.listJarStock,
-);
+  JarStockController.listJarStock
+)
 
 jarStockRouter.get(
-  "/movements/list",
+  '/movements/list',
   authMiddleware,
   validateBrandAccess,
-  JarStockController.listMovements,
-);
+  JarStockController.listMovements
+)

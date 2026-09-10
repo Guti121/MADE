@@ -1,9 +1,10 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
+import { AppError } from '../../helpers/AppError.js'
 
 export class StockModel {
-  static async createStock(client, { userId, params, unitsPrice }) {
+  static async createStock (client, { userId, params, unitsPrice }) {
     const query = `INSERT INTO stock (Component_id,Location_id,Quantity_base,Avg_price,Wholesale_price,Consumer_price,created_by,updated_by)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`;
+        VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *`
 
     const values = [
       params.component_id,
@@ -12,51 +13,50 @@ export class StockModel {
       unitsPrice.purchaseUnitPrice,
       unitsPrice.wholesaleUnitPrice,
       unitsPrice.consumerUnitPrice,
-      userId,
-    ];
+      userId
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async deleteStock({ data }) {
+  static async deleteStock ({ data }) {
     const query = `UPDATE stock
     SET state = FALSE
-    WHERE id = $1 AND location_id = $2 AND state RETURNING *;`;
-    const values = [data.id_stock, data.id];
+    WHERE id = $1 AND location_id = $2 AND state RETURNING *;`
+    const values = [data.id_stock, data.id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async RetrieveStock({ stockId, location_id, component_id }) {
-    console.log(stockId, location_id);
-
+  static async RetrieveStock ({ stockId, location_id, component_id }) {
     const query = `SELECT * FROM stock WHERE id = $1 AND location_id = $2 AND component_id = $3
       AND state = true
-    `;
-    const values = [stockId, location_id, component_id];
+    `
+    const values = [stockId, location_id, component_id]
 
-    const result = await pool.query(query, values);
-    return result.rows[0];
+    const result = await pool.query(query, values)
+    return result.rows[0]
   }
 
-  static async updateStock(
+  // Row-locked read for use inside a transaction: concurrent update/loss/adjust
+  // on the same stock row serialize on this lock instead of racing on a stale
+  // unlocked snapshot (lost updates).
+  static async lockStock (client, { stockId, location_id, component_id }) {
+    const query = `SELECT * FROM stock
+      WHERE id = $1 AND location_id = $2 AND component_id = $3 AND state = true
+      FOR UPDATE`
+    const result = await client.query(query, [stockId, location_id, component_id])
+    return result.rows[0]
+  }
+
+  static async updateStock (
     client,
-    { stockId, unitsPrice, location_id, component_id, AVGPrice, userId },
+    { stockId, unitsPrice, location_id, component_id, AVGPrice, userId }
   ) {
-    console.log(
-      "ssssssssssssssss",
-      unitsPrice.quantityInBase,
-      AVGPrice,
-      unitsPrice.wholesaleUnitPrice,
-      unitsPrice.consumerUnitPrice,
-      location_id,
-      userId,
-      component_id,
-    );
     const query = `
     UPDATE stock
         SET 
@@ -69,7 +69,7 @@ export class StockModel {
         WHERE Location_id = $6 AND id =$7 AND component_id =$8 AND state = true
 
 
-        RETURNING*`;
+        RETURNING*`
 
     const values = [
       AVGPrice.newQuantity,
@@ -79,16 +79,17 @@ export class StockModel {
       userId,
       location_id,
       stockId,
-      component_id,
-    ];
+      component_id
+    ]
 
-    const result = await client.query(query, values);
+    const result = await client.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
-  static async registerLoss(
+
+  static async registerLoss (
     client,
-    { quantity, userId, stockId, component_id, location_id },
+    { quantity, userId, stockId, component_id, location_id }
   ) {
     const query = `
     UPDATE stock
@@ -101,25 +102,16 @@ export class StockModel {
     AND state = true
 
     RETURNING *
-  `;
-    console.log(
-      "cuantity perdida",
-      quantity,
-      userId,
-      stockId,
-      component_id,
-      location_id,
-      "as",
-    );
-    const values = [quantity, userId, stockId, component_id, location_id];
+  `
+    const values = [quantity, userId, stockId, component_id, location_id]
 
-    const result = await client.query(query, values);
-    return result.rows[0];
+    const result = await client.query(query, values)
+    return result.rows[0]
   }
 
-  static async registerAdjust(
+  static async registerAdjust (
     client,
-    { quantity, userId, stockId, component_id, location_id },
+    { quantity, userId, stockId, component_id, location_id }
   ) {
     const query = `
     UPDATE stock
@@ -132,23 +124,15 @@ export class StockModel {
 
 
     RETURNING *
-  `;
-    console.log(
-      "cuantity perdida",
-      quantity,
-      userId,
-      stockId,
-      component_id,
-      location_id,
-      "as",
-    );
-    const values = [quantity, userId, stockId, component_id, location_id];
+  `
+    const values = [quantity, userId, stockId, component_id, location_id]
 
-    const result = await client.query(query, values);
-    return result.rows[0];
+    const result = await client.query(query, values)
+    return result.rows[0]
   }
-  //For validation Updates
-  static async retrieveStock({ stock_id, location_id }) {
+
+  // For validation Updates
+  static async retrieveStock ({ stock_id, location_id }) {
     const query = `SELECT
       s.*,
 
@@ -171,27 +155,27 @@ export class StockModel {
 
     WHERE s.id = $1 AND l.id = $2
       AND c.state = true 
-  `;
+  `
 
-    const values = [stock_id, location_id];
+    const values = [stock_id, location_id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  //retrieve for Sale
-  static async retrieveStockByComponent({ component_id, location_id }) {
+  // retrieve for Sale
+  static async retrieveStockByComponent ({ component_id, location_id }) {
     const query =
-      "SELECT * FROM stock WHERE component_id = $1 AND location_id = $2  AND state = true ";
-    const values = [component_id, location_id];
+      'SELECT * FROM stock WHERE component_id = $1 AND location_id = $2  AND state = true '
+    const values = [component_id, location_id]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async discountStock(client, { component_id, location_id, quantity }) {
+  static async discountStock (client, { component_id, location_id, quantity }) {
     const stockQuery = `
     SELECT *
     FROM stock
@@ -199,25 +183,25 @@ export class StockModel {
       AND location_id = $2 
       AND state = true
     FOR UPDATE
-  `;
+  `
 
     const stockResult = await client.query(stockQuery, [
       component_id,
-      location_id,
-    ]);
+      location_id
+    ])
 
-    const stock = stockResult.rows[0];
+    const stock = stockResult.rows[0]
 
     if (!stock) {
-      throw new Error(`Stock not found for component ${component_id}`);
+      throw new AppError(`Stock not found for component ${component_id}`)
     }
 
-    const currentQuantity = Number(stock.quantity_base);
+    const currentQuantity = Number(stock.quantity_base)
 
-    const quantityToDiscount = Number(quantity);
+    const quantityToDiscount = Number(quantity)
 
     if (quantityToDiscount > currentQuantity) {
-      throw new Error(`Insufficient stock for component ${component_id}`);
+      throw new AppError(`Insufficient stock for component ${component_id}`)
     }
 
     const query = `
@@ -228,21 +212,20 @@ export class StockModel {
       AND location_id = $3 
       AND state = true
     RETURNING *
-  `;
+  `
 
     const result = await client.query(query, [
       quantityToDiscount,
       component_id,
-      location_id,
-    ]);
-    console.log(result.rows[0]);
-    return result.rows[0];
+      location_id
+    ])
+    return result.rows[0]
   }
 
   // Simple average of the per-base-unit price across every location that
   // stocks this component. Locations without a stock row are ignored.
   // Returns { avg_cost_per_base: string|null, sedes_con_stock: string }.
-  static async avgPriceAcrossLocations({ componentId }) {
+  static async avgPriceAcrossLocations ({ componentId }) {
     const query = `
       SELECT
         AVG(avg_price)       AS avg_cost_per_base,
@@ -252,21 +235,21 @@ export class StockModel {
       FROM stock
       WHERE component_id = $1
         AND state = true
-    `;
+    `
 
-    const result = await pool.query(query, [componentId]);
-    return result.rows[0];
+    const result = await pool.query(query, [componentId])
+    return result.rows[0]
   }
 
-  static async listStock({
+  static async listStock ({
     brand_id,
     page = 1,
     limit = 10,
     name,
     location,
-    type_component,
+    type_component
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT
@@ -291,37 +274,37 @@ export class StockModel {
 
     WHERE c.brand_id = $1
       AND c.state = true 
-  `;
+  `
 
-    const values = [brand_id];
+    const values = [brand_id]
 
-    let index = 2;
+    let index = 2
 
     // FILTER BY COMPONENT NAME
     if (name) {
-      query += ` AND c.name ILIKE $${index}`;
+      query += ` AND c.name ILIKE $${index}`
 
-      values.push(`%${name}%`);
+      values.push(`%${name}%`)
 
-      index++;
+      index++
     }
 
     // FILTER BY LOCATION
     if (location) {
-      query += ` AND s.location_id = $${index}`;
+      query += ` AND s.location_id = $${index}`
 
-      values.push(location);
+      values.push(location)
 
-      index++;
+      index++
     }
 
     // FILTER BY TYPE COMPONENT
     if (type_component) {
-      query += ` AND c.type_component_id = $${index}`;
+      query += ` AND c.type_component_id = $${index}`
 
-      values.push(type_component);
+      values.push(type_component)
 
-      index++;
+      index++
     }
 
     query += `
@@ -330,11 +313,11 @@ export class StockModel {
     LIMIT $${index}
 
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     // COUNT QUERY
 
@@ -354,43 +337,43 @@ export class StockModel {
 
     WHERE c.brand_id = $1
       AND c.state = true
-  `;
+  `
 
-    const countValues = [brand_id];
+    const countValues = [brand_id]
 
-    index = 2;
+    index = 2
 
     if (name) {
       countQuery += `
       AND c.name ILIKE $${index}
-    `;
+    `
 
-      countValues.push(`%${name}%`);
+      countValues.push(`%${name}%`)
 
-      index++;
+      index++
     }
 
     if (location) {
       countQuery += `
       AND s.location_id = $${index}
-    `;
+    `
 
-      countValues.push(location);
+      countValues.push(location)
 
-      index++;
+      index++
     }
 
     if (type_component) {
       countQuery += `
       AND c.type_component_id = $${index}
-    `;
+    `
 
-      countValues.push(type_component);
+      countValues.push(type_component)
 
-      index++;
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
@@ -401,7 +384,7 @@ export class StockModel {
 
       limit,
 
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

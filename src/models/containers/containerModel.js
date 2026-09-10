@@ -1,30 +1,24 @@
-import { pool } from "../../config/db.js";
+import { pool } from '../../config/db.js'
 
 export class ContainerModel {
-  static async createContainer({ brand_id, params, newMeasures, userId }) {
-    console.log(
-      params,
-      brand_id,
-      newMeasures,
-      "--------------------------------",
-    );
+  static async createContainer ({ brand_id, params, newMeasures, userId }) {
     const query =
-      "INSERT INTO containers (name , capacity, unit,type_Container_id, brand_id,created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *";
+      'INSERT INTO containers (name , capacity, unit,type_Container_id, brand_id,created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *'
     const values = [
       params.name,
       newMeasures.quantityInBase,
       newMeasures.units,
       params.type_container,
       brand_id,
-      userId,
-    ];
+      userId
+    ]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async updateContainer({ brandId, params, newMeasures, userId }) {
+  static async updateContainer ({ brandId, params, newMeasures, userId }) {
     const query = `
   UPDATE containers
   SET 
@@ -37,7 +31,7 @@ export class ContainerModel {
   WHERE brand_id = $6   
     AND id = $7
   RETURNING *;
-`;
+`
 
     const values = [
       params.name,
@@ -46,35 +40,35 @@ export class ContainerModel {
       params.type_container,
       userId,
       brandId,
-      params.id,
-    ];
+      params.id
+    ]
 
-    const result = await pool.query(query, values);
-    console.log(result);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
 
-  static async deleteContainer({ brandId, params }) {
+  static async deleteContainer ({ brandId, params }) {
     const query = `DELETE FROM Containers 
       WHERE id = $1 AND brand_id = $2
-      RETURNING *;`;
+      RETURNING *;`
 
-    const values = [params.id, brandId];
+    const values = [params.id, brandId]
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values)
 
-    return result.rows[0];
+    return result.rows[0]
   }
-  static async listContainer({
+
+  static async listContainer ({
     brand_id,
     page = 1,
     limit = 10,
     name,
     capacity,
-    type_container,
+    type_container
   }) {
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit
 
     let query = `
     SELECT 
@@ -84,42 +78,42 @@ export class ContainerModel {
     JOIN type_containers tc
       ON c.type_container_id = tc.id
     WHERE c.brand_id = $1
-  `;
+  `
 
-    const values = [brand_id];
+    const values = [brand_id]
 
-    let index = 2;
+    let index = 2
 
     // FILTER NAME
     if (name) {
-      query += ` AND c.name ILIKE $${index}`;
-      values.push(`%${name}%`);
-      index++;
+      query += ` AND c.name ILIKE $${index}`
+      values.push(`%${name}%`)
+      index++
     }
 
     // FILTER TYPE CONTAINER NAME
     if (type_container) {
-      query += ` AND c.type_container_id = $${index}`;
-      values.push(type_container);
-      index++;
+      query += ` AND c.type_container_id = $${index}`
+      values.push(type_container)
+      index++
     }
 
     // FILTER CAPACITY
     if (capacity) {
-      query += ` AND c.capacity = $${index}`;
-      values.push(capacity);
-      index++;
+      query += ` AND c.capacity = $${index}`
+      values.push(capacity)
+      index++
     }
 
     query += `
     ORDER BY c.id DESC
     LIMIT $${index}
     OFFSET $${index + 1}
-  `;
+  `
 
-    values.push(limit, offset);
+    values.push(limit, offset)
 
-    const resultQuery = await pool.query(query, values);
+    const resultQuery = await pool.query(query, values)
 
     // ---------------- COUNT QUERY ----------------
 
@@ -129,38 +123,38 @@ export class ContainerModel {
     JOIN type_containers tc
       ON c.type_container_id = tc.id
     WHERE c.brand_id = $1
-  `;
+  `
 
-    const countValues = [brand_id];
+    const countValues = [brand_id]
 
-    index = 2;
+    index = 2
 
     if (name) {
-      countQuery += ` AND c.name ILIKE $${index}`;
-      countValues.push(`%${name}%`);
-      index++;
+      countQuery += ` AND c.name ILIKE $${index}`
+      countValues.push(`%${name}%`)
+      index++
     }
 
     if (type_container) {
-      countQuery += ` AND c.type_container_id =$${index}`;
-      countValues.push(type_container);
-      index++;
+      countQuery += ` AND c.type_container_id =$${index}`
+      countValues.push(type_container)
+      index++
     }
 
     if (capacity) {
-      countQuery += ` AND c.capacity = $${index}`;
-      countValues.push(capacity);
-      index++;
+      countQuery += ` AND c.capacity = $${index}`
+      countValues.push(capacity)
+      index++
     }
 
-    const countResult = await pool.query(countQuery, countValues);
+    const countResult = await pool.query(countQuery, countValues)
 
     return {
       data: resultQuery.rows,
       total: Number(countResult.rows[0].total),
       page,
       limit,
-      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit),
-    };
+      totalPages: Math.ceil(Number(countResult.rows[0].total) / limit)
+    }
   }
 }

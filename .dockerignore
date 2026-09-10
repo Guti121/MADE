@@ -1,0 +1,16 @@
+node_modules
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+*.log
+coverage
+dist
+build
+script_key.js
+database/seed-test-data.js
+Dockerfile
+.dockerignore
+README*
