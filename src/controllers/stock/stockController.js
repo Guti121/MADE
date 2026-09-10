@@ -1,5 +1,5 @@
 import { validateSchema } from '../../helpers/validateSchema.js'
-import { StockModel } from '../../models/stock/StockModel.js'
+import { StockModel } from '../../models/stock/stockModel.js'
 import { StockMovementModel } from '../../models/stock/stockMovementModel.js'
 import { BussinesLogicStock } from '../../services/stock/bussinesLogicStock.js'
 import { StockService } from '../../services/stock/stockServices.js'

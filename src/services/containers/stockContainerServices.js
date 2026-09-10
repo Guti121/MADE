@@ -1,7 +1,7 @@
 import { pool } from '../../config/db.js'
 import { StockContainerModel } from '../../models/containers/stockContainerModel.js'
 import { StockContainerMovementModel } from '../../models/containers/stockContainerMovement.js'
-import { StockModel } from '../../models/stock/StockModel.js'
+import { StockModel } from '../../models/stock/stockModel.js'
 import { StockMovementModel } from '../../models/stock/stockMovementModel.js'
 import { AppError } from '../../helpers/AppError.js'
 

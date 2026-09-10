@@ -1,5 +1,5 @@
 import { pool } from '../../config/db.js'
-import { StockModel } from '../../models/stock/StockModel.js'
+import { StockModel } from '../../models/stock/stockModel.js'
 import { StockMovementModel } from '../../models/stock/stockMovementModel.js'
 import { BussinesLogicStock } from './bussinesLogicStock.js'
 import { AppError } from '../../helpers/AppError.js'
