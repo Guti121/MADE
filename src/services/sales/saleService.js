@@ -142,6 +142,7 @@ export class SaleService {
     page,
     limit,
     client_id,
+    payment_method,
     start_date,
     end_date,
   }) {
@@ -157,6 +158,7 @@ export class SaleService {
       page,
       limit,
       client_id,
+      payment_method,
       start_date,
       end_date,
     });

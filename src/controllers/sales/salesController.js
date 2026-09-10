@@ -87,6 +87,7 @@ export class SaleController {
         page: data.page,
         limit: data.limit,
         client_id: data.client_id,
+        payment_method: data.payment_method,
         start_date: data.start_date,
         end_date: data.end_date,
       });

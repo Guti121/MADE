@@ -13,10 +13,11 @@ export class SaleModel {
         total_cost,
         total_profit,
         is_wholesale,
-        created_by
+        created_by,
+        payment_method
       )
       VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
       )
       RETURNING *
     `;
@@ -32,6 +33,7 @@ export class SaleModel {
       data.total_profit,
       data.is_wholesale,
       data.created_by,
+      data.payment_method || "EFECTIVO",
     ];
 
     const result = await client.query(query, values);
@@ -44,6 +46,7 @@ export class SaleModel {
     page = 1,
     limit = 10,
     client_id,
+    payment_method,
     start_date,
     end_date,
   }) {
@@ -63,6 +66,12 @@ export class SaleModel {
     if (client_id) {
       conditions.push(`s.client_id = $${param++}`);
       values.push(client_id);
+    }
+
+    // PAYMENT METHOD
+    if (payment_method) {
+      conditions.push(`s.payment_method = $${param++}`);
+      values.push(payment_method);
     }
 
     // START DATE
@@ -105,6 +114,8 @@ export class SaleModel {
 
       s.is_wholesale,
 
+      s.payment_method,
+
       s.created_at,
 
       COUNT(si.id) AS items_count
@@ -145,6 +156,11 @@ export class SaleModel {
     if (client_id) {
       countConditions.push(`client_id = $${countParam++}`);
       countValues.push(client_id);
+    }
+
+    if (payment_method) {
+      countConditions.push(`payment_method = $${countParam++}`);
+      countValues.push(payment_method);
     }
 
     if (start_date) {

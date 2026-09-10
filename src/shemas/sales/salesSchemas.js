@@ -1,5 +1,15 @@
 import z from "zod";
 
+// How a sale was paid. Kept in sync with the chk_sales_payment_method
+// CHECK constraint on the sales table.
+export const PAYMENT_METHODS = [
+  "EFECTIVO",
+  "TRANSFERENCIA",
+  "TARJETA",
+  "ADDI",
+  "SISTECREDITO",
+];
+
 // A quantity override for one formula line. Only the quantity can change, and it
 // is validated (>= the formula's quantity) in the service, not here.
 const lineOverrideSchema = z.object({
@@ -45,6 +55,8 @@ export const createSaleSchema = z.object({
 
   is_wholesale: z.boolean().default(false),
 
+  payment_method: z.enum(PAYMENT_METHODS).default("EFECTIVO"),
+
   sales_items: z.array(saleItemSchema).min(1, "At least one item is required"),
 });
 
@@ -60,6 +72,8 @@ export const getSaleSchema = z.object({
   end_date: z.string().date().optional(),
 
   client_id: z.coerce.number().positive().optional(),
+
+  payment_method: z.enum(PAYMENT_METHODS).optional(),
 });
 
 export const retrieveSaleSchema = z.object({
