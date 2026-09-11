@@ -1,8 +1,40 @@
 -- Auto-generated schema dump
 -- Database: essence_DB
 -- Generated: 2026-08-20T00:25:26.906Z
+-- Consolidated 2026-09-11: this baseline now includes everything through
+-- database/migrations/0011 (session hardening, numeric CHECKs, FK fixes,
+-- discount/tax bounds). A brand-new database only needs this one file — see
+-- database/setup.js and "npm run db:setup". Migrations 0001-0011 are kept for
+-- historical reference / any already-provisioned database catching up; any
+-- NEW schema change should be a fresh migration starting at 0012.
 
 CREATE TYPE user_role AS ENUM ('admin', 'owner', 'client');
+
+-- Every table below has an `id INTEGER DEFAULT nextval('..._id_seq')` column
+-- (dumped from a live database where these already existed as SERIAL
+-- sequences) — the sequences themselves must be created explicitly first, or
+-- every CREATE TABLE below fails on a truly empty database.
+CREATE SEQUENCE IF NOT EXISTS users_id_seq;
+CREATE SEQUENCE IF NOT EXISTS brands_id_seq;
+CREATE SEQUENCE IF NOT EXISTS user_sessions_id_seq;
+CREATE SEQUENCE IF NOT EXISTS formulas_id_seq;
+CREATE SEQUENCE IF NOT EXISTS locations_id_seq;
+CREATE SEQUENCE IF NOT EXISTS type_components_id_seq;
+CREATE SEQUENCE IF NOT EXISTS type_containers_id_seq;
+CREATE SEQUENCE IF NOT EXISTS components_id_seq;
+CREATE SEQUENCE IF NOT EXISTS containers_id_seq;
+CREATE SEQUENCE IF NOT EXISTS sales_id_seq;
+CREATE SEQUENCE IF NOT EXISTS clients_id_seq;
+CREATE SEQUENCE IF NOT EXISTS containers_stock_id_seq;
+CREATE SEQUENCE IF NOT EXISTS formula_components_id_seq;
+CREATE SEQUENCE IF NOT EXISTS sales_items_id_seq;
+CREATE SEQUENCE IF NOT EXISTS stock_id_seq;
+CREATE SEQUENCE IF NOT EXISTS component_jar_stock_id_seq;
+CREATE SEQUENCE IF NOT EXISTS jar_movements_id_seq;
+CREATE SEQUENCE IF NOT EXISTS container_movements_id_seq;
+CREATE SEQUENCE IF NOT EXISTS sale_item_components_id_seq;
+CREATE SEQUENCE IF NOT EXISTS sale_item_containers_id_seq;
+CREATE SEQUENCE IF NOT EXISTS stock_movements_id_seq;
 
 -- ============================================
 -- Table: users
@@ -223,6 +255,9 @@ CREATE TABLE containers_stock (
   updated_by INTEGER,
   PRIMARY KEY (id),
   CONSTRAINT unique_container_location UNIQUE (container_id, location_id),
+  CONSTRAINT chk_containers_stock_nonneg CHECK (
+    quantity >= 0 AND avg_price >= 0 AND wholesale_price >= 0 AND consumer_price >= 0
+  ),
   CONSTRAINT fk_container_stock_container FOREIGN KEY (container_id) REFERENCES containers(id) ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT fk_container_stock_location FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE NO ACTION ON DELETE CASCADE
 );
@@ -239,6 +274,7 @@ CREATE TABLE formula_components (
   unit VARCHAR(10) NOT NULL,
   PRIMARY KEY (id),
   CONSTRAINT chk_formula_line CHECK (component_id IS NOT NULL OR type_component_id IS NOT NULL),
+  CONSTRAINT chk_formula_components_qty_pos CHECK (quantity > 0),
   CONSTRAINT fk_formula_components_component FOREIGN KEY (component_id) REFERENCES components(id) ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT fk_formula_components_type_component FOREIGN KEY (type_component_id) REFERENCES type_components(id) ON UPDATE NO ACTION ON DELETE RESTRICT,
   CONSTRAINT fk_formula_components_formula FOREIGN KEY (formula_id) REFERENCES formulas(id) ON UPDATE NO ACTION ON DELETE CASCADE
@@ -263,6 +299,8 @@ CREATE TABLE sales_items (
   formula_unit_price NUMERIC(12,0),
   formula_base_price NUMERIC(12,0),
   PRIMARY KEY (id),
+  CONSTRAINT chk_sales_items_nonneg CHECK (quantity > 0 AND subtotal >= 0 AND total_cost >= 0),
+  CONSTRAINT chk_sales_items_discount_tax_nonneg CHECK (discount >= 0 AND tax >= 0),
   CONSTRAINT fk_sales_items_formula FOREIGN KEY (formula_id) REFERENCES formulas(id) ON UPDATE NO ACTION ON DELETE NO ACTION,
   CONSTRAINT fk_sales_items_sale FOREIGN KEY (sale_id) REFERENCES sales(id) ON UPDATE NO ACTION ON DELETE CASCADE
 );
@@ -284,6 +322,9 @@ CREATE TABLE stock (
   state BOOLEAN NOT NULL DEFAULT true,
   PRIMARY KEY (id),
   CONSTRAINT unique_component_location UNIQUE (component_id, location_id),
+  CONSTRAINT chk_stock_nonneg CHECK (
+    quantity_base >= 0 AND avg_price >= 0 AND wholesale_price >= 0 AND consumer_price >= 0
+  ),
   CONSTRAINT fk_stock_component FOREIGN KEY (component_id) REFERENCES components(id) ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT fk_stock_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE SET NULL,
   CONSTRAINT fk_stock_location FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -305,6 +346,7 @@ CREATE TABLE component_jar_stock (
   updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT unique_jar_component_location UNIQUE (component_id, location_id),
+  CONSTRAINT chk_component_jar_stock_nonneg CHECK (quantity_base >= 0),
   CONSTRAINT fk_jar_stock_component FOREIGN KEY (component_id) REFERENCES components(id) ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT fk_jar_stock_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE SET NULL,
   CONSTRAINT fk_jar_stock_location FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -328,6 +370,7 @@ CREATE TABLE jar_movements (
   created_by INTEGER NOT NULL,
   location_id INTEGER NOT NULL,
   PRIMARY KEY (id),
+  CONSTRAINT chk_jar_movements_price_nonneg CHECK (unit_price >= 0 AND total_price >= 0),
   CONSTRAINT fk_jar_movement_stock FOREIGN KEY (jar_stock_id) REFERENCES component_jar_stock(id) ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT fk_jar_movement_user FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE RESTRICT
 );
@@ -350,7 +393,13 @@ CREATE TABLE container_movements (
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
   created_by INTEGER,
   PRIMARY KEY (id),
-  CONSTRAINT fk_container_movement_stock FOREIGN KEY (container_stock_id) REFERENCES containers_stock(id) ON UPDATE NO ACTION ON DELETE CASCADE
+  CONSTRAINT chk_container_movements_price_nonneg CHECK (unit_price >= 0 AND total_price >= 0),
+  CONSTRAINT fk_container_movement_stock FOREIGN KEY (container_stock_id) REFERENCES containers_stock(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+  -- RESTRICT (not CASCADE): the movement ledger is append-only, so deleting a
+  -- referenced container/location must be blocked, not silently erase history.
+  CONSTRAINT fk_container_movement_container FOREIGN KEY (container_id) REFERENCES containers(id) ON UPDATE NO ACTION ON DELETE RESTRICT,
+  CONSTRAINT fk_container_movement_location FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE NO ACTION ON DELETE RESTRICT,
+  CONSTRAINT fk_container_movement_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE SET NULL
 );
 
 -- ============================================
@@ -407,9 +456,35 @@ CREATE TABLE stock_movements (
   created_by INTEGER NOT NULL,
   location_id INTEGER NOT NULL,
   PRIMARY KEY (id),
+  CONSTRAINT chk_stock_movements_price_nonneg CHECK (unit_price >= 0 AND total_price >= 0),
   CONSTRAINT fk_stock_movement_stock FOREIGN KEY (stock_id) REFERENCES stock(id) ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT fk_stock_movement_user FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE NO ACTION ON DELETE RESTRICT
 );
+
+-- ============================================
+-- Sequence ownership (so DROP TABLE cascades to its sequence, matching SERIAL)
+-- ============================================
+ALTER SEQUENCE users_id_seq OWNED BY users.id;
+ALTER SEQUENCE brands_id_seq OWNED BY brands.id;
+ALTER SEQUENCE user_sessions_id_seq OWNED BY user_sessions.id;
+ALTER SEQUENCE formulas_id_seq OWNED BY formulas.id;
+ALTER SEQUENCE locations_id_seq OWNED BY locations.id;
+ALTER SEQUENCE type_components_id_seq OWNED BY type_components.id;
+ALTER SEQUENCE type_containers_id_seq OWNED BY type_containers.id;
+ALTER SEQUENCE components_id_seq OWNED BY components.id;
+ALTER SEQUENCE containers_id_seq OWNED BY containers.id;
+ALTER SEQUENCE sales_id_seq OWNED BY sales.id;
+ALTER SEQUENCE clients_id_seq OWNED BY clients.id;
+ALTER SEQUENCE containers_stock_id_seq OWNED BY containers_stock.id;
+ALTER SEQUENCE formula_components_id_seq OWNED BY formula_components.id;
+ALTER SEQUENCE sales_items_id_seq OWNED BY sales_items.id;
+ALTER SEQUENCE stock_id_seq OWNED BY stock.id;
+ALTER SEQUENCE component_jar_stock_id_seq OWNED BY component_jar_stock.id;
+ALTER SEQUENCE jar_movements_id_seq OWNED BY jar_movements.id;
+ALTER SEQUENCE container_movements_id_seq OWNED BY container_movements.id;
+ALTER SEQUENCE sale_item_components_id_seq OWNED BY sale_item_components.id;
+ALTER SEQUENCE sale_item_containers_id_seq OWNED BY sale_item_containers.id;
+ALTER SEQUENCE stock_movements_id_seq OWNED BY stock_movements.id;
 
 -- ============================================
 -- Deferred foreign keys (break circular dependencies)

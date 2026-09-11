@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "lint": "standard"
+    "lint": "standard",
+    "db:setup": "node database/setup.js",
+    "db:migrate": "node database/run-migration.js"
   },
   "engines": {
     "node": ">=20"

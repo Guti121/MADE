@@ -24,7 +24,13 @@ BEGIN
 END
 $$;
 
-GRANT CONNECT ON DATABASE "essence_DB" TO made_app;
+-- current_database() so this works regardless of what the database is named
+-- (GRANT ... ON DATABASE needs a literal identifier, hence the EXECUTE format).
+DO $$
+BEGIN
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO made_app', current_database());
+END
+$$;
 GRANT USAGE ON SCHEMA public TO made_app;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO made_app;
